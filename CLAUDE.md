@@ -327,6 +327,8 @@ Full report: `QA_AUDIT_REPORT.md`
 | `scripts/run_paper_trading.py` — pre-flight check + live monitor (polls gibbz_trades CSV) | ✅ done |
 | `scripts/daily_paper_trading_report.py` — daily + cumulative metrics from real trade logs | ✅ done |
 | `docs/paper_trading_setup.md` — paper trading protocol and transition criteria | ✅ done |
+| `scripts/level2_features_bar.py` — Level 2 proxy feature detection from 500-tick bars | ✅ done |
+| `scripts/run_backtest_with_level2.py` — L2 dry run comparative backtest | ✅ done |
 
 ---
 
