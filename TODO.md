@@ -99,3 +99,13 @@ All 19 P0–P3 findings from `QA_AUDIT_REPORT.md` are resolved as of 2026-05-30.
   - Phase 9: Final verdict with corrected decision logic (INCONCLUSO not NO for Exp>0 / PF>1.0)
 - [x] **[EV2]** Fix decision logic bug — NO only when exp<=0 or pf<1.0; INCONCLUSO when positive but concentrated
 - Results: WR=38.7%, PF=1.56, Exp=+2.61 pts/trade, Total=+277 pts, Verdict=INCONCLUSO
+- [x] **[EV3]** Create `robustness_audit.py` — 9-phase robustness audit (concentration, resilience, regime, setup, temporal, stats, ESS, verdict)
+  - Phase 1: PnL concentration (Top 1/3/5/10)
+  - Phase 2: Resilience scenarios (Base / sin Top1 / sin Top3 / sin Top5 / sin Top10)
+  - Phase 3: Regime segmentation (session_type)
+  - Phase 4: Setup analysis (all 7 setup types)
+  - Phase 5: Setup dependency (eliminate best/top2/top3 setups)
+  - Phase 6: Temporal stability by context month + CV
+  - Phase 7: PF, Expectancy, Sharpe (per-trade), Recovery Factor, Max DD, OOS 70/30
+  - Phase 8: Edge Survival Score 0-100
+  - Phase 9: Final verdict — EDGE / ROBUSTEZ / PRODUCTION READINESS + 7 questions with evidence

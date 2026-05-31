@@ -110,6 +110,7 @@ engine_view.py        EngineView — terminal dashboard
 | `extract_context.py` | Claude Vision → historical_context JSON | `python extract_context.py --watch` |
 | `full_backtest.py` | Full backtest harness | `python full_backtest.py` |
 | `edge_validation.py` | 9-phase scientific edge validation | `python edge_validation.py` |
+| `robustness_audit.py` | 9-phase edge robustness audit (concentration/resilience/ESS) | `python robustness_audit.py` |
 | `simulation/replay_treadmill.py` | GO-LIVE readiness score | `python simulation/replay_treadmill.py` |
 
 ---
@@ -310,6 +311,7 @@ Full report: `QA_AUDIT_REPORT.md`
 | UTF-8 stdout reconfiguration for Windows cp1252 terminals | ✅ done |
 | Decision logic fix: NO only when exp<=0 or PF<1.0 | ✅ done |
 | **Result**: WR=38.7%, PF=1.56, Exp=+2.61 pts/trade, Verdict=INCONCLUSO | ✅ done |
+| `robustness_audit.py` — 9-phase robustness audit (concentration, resilience, ESS) | ✅ done |
 
 ---
 
