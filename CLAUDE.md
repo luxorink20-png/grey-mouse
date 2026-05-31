@@ -323,6 +323,10 @@ Full report: `QA_AUDIT_REPORT.md`
 | `scripts/random_treadmill_backtest.py` — bootstrap CI treadmill (PF/Exp/MaxDD distribution) | ✅ done |
 | `scripts/analyze_inactive_setups.py` — forensic analysis of why ORB/VWAP/GAP fire 0 trades | ✅ done |
 | `scripts/validate_go_live_readiness.py` — go-live readiness score (0-100, GO/NO-GO) | ✅ done |
+| `config/paper_trading_config.yaml` — success/failure/alert criteria for paper trading | ✅ done |
+| `scripts/run_paper_trading.py` — pre-flight check + live monitor (polls gibbz_trades CSV) | ✅ done |
+| `scripts/daily_paper_trading_report.py` — daily + cumulative metrics from real trade logs | ✅ done |
+| `docs/paper_trading_setup.md` — paper trading protocol and transition criteria | ✅ done |
 
 ---
 

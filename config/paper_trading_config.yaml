@@ -1,0 +1,61 @@
+# GIBBZ Paper Trading Configuration
+# Proposito: Validar edge en mercado real antes de live trading
+# Duracion minima: 2-4 semanas
+
+paper_trading:
+  enabled: true
+  start_date: "2026-05-31"
+  expected_duration_weeks: 4
+
+  # Parametros de la sesion (sin optimizacion — definiciones objetivas)
+  trading_hours:
+    timezone: "America/New_York"
+    open: "09:30"
+    close: "16:00"
+
+  context_filter:
+    enable_vol_release: true
+    enable_destructive_regime: true
+    enable_session_kill_switch: true
+    session_maxdd_threshold: 30.0
+
+  # Criterios de exito (2 semanas consecutivas para avanzar a live)
+  success_criteria:
+    min_profit_factor: 2.5
+    max_drawdown_pts: 20.0
+    min_win_rate: 0.45
+    min_cumulative_trades: 20
+    min_trades_per_week: 5
+    # Degradacion maxima aceptable vs baseline backtest (PF 2.91)
+    max_pf_degradation_pct: 40.0
+
+  # Criterios de fallo (detener paper trading inmediatamente)
+  failure_criteria:
+    pf_below_threshold: 2.0
+    pf_consecutive_days: 3
+    maxdd_critical_pts: 30.0
+    wr_below_threshold: 0.35
+    wr_consecutive_weeks: 1
+    zero_trades_consecutive_days: 3
+
+  # Alertas (niveles de warning antes de failure)
+  alerts:
+    warn_maxdd_pts: 20.0
+    warn_pf_degradation: 2.3
+    warn_wr: 0.40
+    warn_daily_trades_high: 10
+
+  # Logs de sesion de trading (generados por engine.py)
+  logging:
+    trades_csv_pattern: "logs/gibbz_trades_{date}.csv"
+    session_csv_pattern: "logs/gibbz_session_{date}.csv"
+    context_filter_log: "logs/gibbz.log"
+    reports_dir: "reports/paper_trading"
+
+# Esta seccion se activa SOLO despues de 2-4 semanas de paper trading exitoso
+live_trading_phase1:
+  enabled: false
+  capital_allocation: 0.15
+  position_size_multiplier: 0.5
+  max_daily_loss_pts: 15.0
+  max_session_dd_pts: 25.0
