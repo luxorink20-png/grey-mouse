@@ -344,10 +344,10 @@ def phase3_march_autopsy(enriched: list, session_meta: dict,
         if t.session.startswith("2026-03"):
             by_sess_march[t.session].append(t)
 
-    all_march_sessions = [d for d in
-                          {e["date"] for ef in sorted(OUTCOMES_DIR.glob("2026-03*_expansion.json"))
-                           for e in [json.load(open(ef, encoding="utf-8"))]}
-                          if True]
+    all_march_sessions = sorted(
+        {e.get("session_date", "") for ef in sorted(OUTCOMES_DIR.glob("2026-03*_expansion.json"))
+         for e in [json.load(open(ef, encoding="utf-8"))]}
+    )
 
     march_enriched = [e for e in enriched if e["session"].startswith("2026-03")]
 
@@ -623,9 +623,8 @@ def phase8_failure_signatures(enriched: list, all_trades: list) -> dict:
     overtraded.sort(key=lambda x: x["total_pnl"])
 
     # 5. Direction dominance in losing sessions
-    losing_sessions = {s["date"]
-                       for s in sorted(by_sess_m.keys(),
-                                       key=lambda d: sum(t.pnl for t in by_sess_m[d]))[:10]}
+    losing_sessions = set(sorted(by_sess_m.keys(),
+                                 key=lambda d: sum(t.pnl for t in by_sess_m[d]))[:10])
     losing_enriched = [e for e in enriched if e["session"] in losing_sessions]
     dir_in_losers = defaultdict(int)
     for e in losing_enriched: dir_in_losers[e["direction"]] += 1
