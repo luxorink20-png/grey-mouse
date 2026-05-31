@@ -109,6 +109,7 @@ engine_view.py        EngineView — terminal dashboard
 | `expansion_session_miner.py` | Post-session analysis | `python expansion_session_miner.py 2026-05-30` |
 | `extract_context.py` | Claude Vision → historical_context JSON | `python extract_context.py --watch` |
 | `full_backtest.py` | Full backtest harness | `python full_backtest.py` |
+| `edge_validation.py` | 9-phase scientific edge validation | `python edge_validation.py` |
 | `simulation/replay_treadmill.py` | GO-LIVE readiness score | `python simulation/replay_treadmill.py` |
 
 ---
@@ -300,6 +301,15 @@ Full report: `QA_AUDIT_REPORT.md`
 | Add Redis/SQLite for session state | Replaces 6+ JSON file formats |
 | Move from Selenium to SpotGamma API | Eliminate HTML fragility |
 | Containerise with Docker (optional) | Any-machine deployment |
+
+### Sprint 6 — Edge Validation — COMPLETE ✅ (2026-05-31)
+| Task | Status |
+|------|--------|
+| `edge_validation.py` — 9-phase scientific edge validation | ✅ done |
+| Direct import of `run_session`/`run_backtest` (no subprocess) | ✅ done |
+| UTF-8 stdout reconfiguration for Windows cp1252 terminals | ✅ done |
+| Decision logic fix: NO only when exp<=0 or PF<1.0 | ✅ done |
+| **Result**: WR=38.7%, PF=1.56, Exp=+2.61 pts/trade, Verdict=INCONCLUSO | ✅ done |
 
 ---
 

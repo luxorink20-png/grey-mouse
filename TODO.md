@@ -84,3 +84,18 @@ All 19 P0–P3 findings from `QA_AUDIT_REPORT.md` are resolved as of 2026-05-30.
 
 - **Sprint 4** — `mypy` configured (`mypy.ini`); running on core pipeline ✅
 - **Sprint 5** — Architecture: IPC TCP socket, Redis/SQLite state, SpotGamma API, Docker (not started)
+
+---
+
+## Sprint 6 — Edge Validation (2026-05-31)
+
+- [x] **[EV1]** Create `edge_validation.py` — 9-phase scientific edge validation (no code modifications)
+  - Phase 1: Dataset inventory (43 sessions, 91 recordings, expansion_outcomes)
+  - Phase 2: Data quality validation per JSONL
+  - Phase 3–5: Full backtest via direct import of run_session/run_backtest + metrics + regime segmentation
+  - Phase 6: Out-of-sample 70/30 split by date
+  - Phase 7: Robustness (session stability, top-3 concentration, CV)
+  - Phase 8: Core >= 65 vs ACG 55-64 using real logs/gibbz_trades_*.csv
+  - Phase 9: Final verdict with corrected decision logic (INCONCLUSO not NO for Exp>0 / PF>1.0)
+- [x] **[EV2]** Fix decision logic bug — NO only when exp<=0 or pf<1.0; INCONCLUSO when positive but concentrated
+- Results: WR=38.7%, PF=1.56, Exp=+2.61 pts/trade, Total=+277 pts, Verdict=INCONCLUSO
