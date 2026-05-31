@@ -19,7 +19,7 @@
 
 This rule exists because stale documentation costs more than writing it. A Claude session that changes code without updating the MDs has left the project in an inconsistent state.
 
-> **Git status:** Local repository only — **no remote configured yet**. Do not push or set a remote without explicit user confirmation.
+> **Git:** `https://github.com/luxorink20-png/grey-mouse` · branch `master` · initial commit pushed 2026-05-30
 
 ---
 
@@ -302,8 +302,8 @@ Full report: `QA_AUDIT_REPORT.md`
 
 ## 12. Git & Version Control
 
-> **Repository:** Local only — `git init` run 2026-05-30.  
-> **No remote configured.** Do not `git push` or `git remote add` without explicit user confirmation.
+> **Repository:** `https://github.com/luxorink20-png/grey-mouse`  
+> **Branch:** `master` → tracking `origin/master`. Initial commit pushed 2026-05-30.
 
 ```powershell
 git log --oneline          # view commits

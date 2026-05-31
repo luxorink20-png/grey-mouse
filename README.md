@@ -1,7 +1,6 @@
 # GIBBZ — Institutional SMC Trading Engine
 
-> **Git status:** Local repository only — no remote configured.  
-> Do not push or add a remote without explicit confirmation.
+> **Repository:** `https://github.com/luxorink20-png/grey-mouse` · branch `master`
 
 Real-time algorithmic trading engine for ES/NQ futures using Smart Money Concepts (SMC). Processes live tick data from ATAS via a C# UDP bridge through a 15-engine Python analysis pipeline, emitting trade signals with voice alerts and structured logs.
 
