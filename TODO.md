@@ -109,3 +109,13 @@ All 19 P0–P3 findings from `QA_AUDIT_REPORT.md` are resolved as of 2026-05-30.
   - Phase 7: PF, Expectancy, Sharpe (per-trade), Recovery Factor, Max DD, OOS 70/30
   - Phase 8: Edge Survival Score 0-100
   - Phase 9: Final verdict — EDGE / ROBUSTEZ / PRODUCTION READINESS + 7 questions with evidence
+- [x] **[EV4]** Create `failure_investigation.py` — 9-phase edge failure investigation (analytical only, no code modifications)
+  - Phase 1: Worst periods identification
+  - Phase 2: Winners vs losers comparison (sconf, R:R, stop distance)
+  - Phase 3: March 2026 autopsy
+  - Phase 4: Regime analysis (session_type vs performance)
+  - Phase 5: Signal distribution analysis (confluence/validator/risk scores)
+  - Phase 6: Time-of-day analysis (ET hour periods)
+  - Phase 7: Edge Decay Ranking by PF per session
+  - Phase 8: Failure Signatures (momentum, overtrading, direction dominance)
+  - Phase 9: GIBBZ EDGE FAILURE REPORT

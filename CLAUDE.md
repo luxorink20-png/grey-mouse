@@ -111,6 +111,7 @@ engine_view.py        EngineView — terminal dashboard
 | `full_backtest.py` | Full backtest harness | `python full_backtest.py` |
 | `edge_validation.py` | 9-phase scientific edge validation | `python edge_validation.py` |
 | `robustness_audit.py` | 9-phase edge robustness audit (concentration/resilience/ESS) | `python robustness_audit.py` |
+| `failure_investigation.py` | 9-phase edge failure investigation (failure signatures/decay/autopsy) | `python failure_investigation.py` |
 | `simulation/replay_treadmill.py` | GO-LIVE readiness score | `python simulation/replay_treadmill.py` |
 
 ---
@@ -312,6 +313,7 @@ Full report: `QA_AUDIT_REPORT.md`
 | Decision logic fix: NO only when exp<=0 or PF<1.0 | ✅ done |
 | **Result**: WR=38.7%, PF=1.56, Exp=+2.61 pts/trade, Verdict=INCONCLUSO | ✅ done |
 | `robustness_audit.py` — 9-phase robustness audit (concentration, resilience, ESS) | ✅ done |
+| `failure_investigation.py` — 9-phase failure investigation (decay, autopsy, signatures) | ✅ done |
 
 ---
 
