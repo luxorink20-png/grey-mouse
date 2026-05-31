@@ -6,9 +6,25 @@
 
 ---
 
-## 0. MD File Update Rule (MANDATORY)
+## 0. Non-Negotiable Rules (MANDATORY — every session)
 
-**Every session that modifies code MUST update the relevant MD files before closing.**
+### Rule 1 — Always commit and push
+Every session that produces any code change MUST finish with:
+```powershell
+git add <changed files>
+git commit -m "..."
+git push
+```
+No exceptions. A session that modifies code without committing and pushing has left the project in an inconsistent state.
+
+### Rule 2 — Never use mock or seed data
+**No `Mock`, `MagicMock`, fake seeds, hardcoded dummy prices, or synthetic fixture data anywhere in production code paths.**
+- Tests may use test fixtures (conftest.py `make_bar()`, etc.) but must never substitute fake data for real engine logic.
+- Simulations must derive entirely from real recorded data — see `simulation/regime_morpher.py` INVARIANTE.
+- If a module needs real data to run and it is not available, it must raise an explicit error — never silently substitute fabricated values.
+
+### Rule 3 — Always update MD files
+**Every session that modifies code MUST update the relevant MD files before committing.**
 
 | File | Update when |
 |------|-------------|
@@ -16,8 +32,6 @@
 | `TODO.md` | Any finding resolved, any new finding discovered |
 | `QA_AUDIT_REPORT.md` | Any P0–P3 finding resolved — mark status, add resolution date |
 | `README.md` | Setup steps change, new entry points, env-var overrides added |
-
-This rule exists because stale documentation costs more than writing it. A Claude session that changes code without updating the MDs has left the project in an inconsistent state.
 
 > **Git:** `https://github.com/luxorink20-png/grey-mouse` · branch `master` · initial commit pushed 2026-05-30
 
@@ -233,7 +247,7 @@ Full report: `QA_AUDIT_REPORT.md`
 - **Error handling:** Never use `except Exception: pass`. Minimum: `except Exception as e: _log.error(...)`. For critical paths: re-raise
 - **Logging:** Use `get_logger(__name__)` from `log_config.py` — no bare `print("[ERROR]")`
 - **Config:** Feature flags go in `config.py`; engine thresholds stay in their class constants
-- **Tests:** One test file per module. Fixtures in `conftest.py`. No voice/audio in unit tests — mock `VoiceEngine`
+- **Tests:** One test file per module. Fixtures in `conftest.py`. No voice/audio in unit tests — mock `VoiceEngine`. Never substitute mock/seed data for real engine logic in production paths (see Rule 2 in Section 0)
 - **Type hints:** All new code in the core pipeline must be fully typed. Run `python -m mypy <file>` before committing — `mypy.ini` enforces strict checking on `bar_aggregator`, `event_engine`, `levels`, `market_feed`, `config`, `log_config`
 - **MD files:** Update all relevant `.md` files every session that modifies code (see Section 0)
 
