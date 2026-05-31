@@ -113,6 +113,7 @@ engine_view.py        EngineView — terminal dashboard
 | `robustness_audit.py` | 9-phase edge robustness audit (concentration/resilience/ESS) | `python robustness_audit.py` |
 | `failure_investigation.py` | 9-phase edge failure investigation (failure signatures/decay/autopsy) | `python failure_investigation.py` |
 | `counterfactual_edge_audit.py` | 9-phase counterfactual edge audit (how much edge is destroyed by each context) | `python counterfactual_edge_audit.py` |
+| `edge_contribution_audit.py` | 9-phase edge contribution audit (who generates money vs who generates damage) | `python edge_contribution_audit.py` |
 | `simulation/replay_treadmill.py` | GO-LIVE readiness score | `python simulation/replay_treadmill.py` |
 
 ---
@@ -316,6 +317,7 @@ Full report: `QA_AUDIT_REPORT.md`
 | `robustness_audit.py` — 9-phase robustness audit (concentration, resilience, ESS) | ✅ done |
 | `failure_investigation.py` — 9-phase failure investigation (decay, autopsy, signatures) | ✅ done |
 | `counterfactual_edge_audit.py` — 9-phase counterfactual audit (damage quantification, purity score) | ✅ done |
+| `edge_contribution_audit.py` — 9-phase contribution audit (who generates money vs damage, NEC score, dependency) | ✅ done |
 
 ---
 
