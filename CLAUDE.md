@@ -319,6 +319,10 @@ Full report: `QA_AUDIT_REPORT.md`
 | `counterfactual_edge_audit.py` — 9-phase counterfactual audit (damage quantification, purity score) | ✅ done |
 | `edge_contribution_audit.py` — 9-phase contribution audit (who generates money vs damage, NEC score, dependency) | ✅ done |
 | `context_filter.py` — context filter module (VOL_RELEASE, destructive regime, session kill switch) | ✅ done |
+| `scripts/expand_backtest_all_sessions.py` — full 43-session breakdown by type | ✅ done |
+| `scripts/random_treadmill_backtest.py` — bootstrap CI treadmill (PF/Exp/MaxDD distribution) | ✅ done |
+| `scripts/analyze_inactive_setups.py` — forensic analysis of why ORB/VWAP/GAP fire 0 trades | ✅ done |
+| `scripts/validate_go_live_readiness.py` — go-live readiness score (0-100, GO/NO-GO) | ✅ done |
 
 ---
 
