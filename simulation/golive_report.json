@@ -1,0 +1,17 @@
+{
+  "calculated_at": "2026-05-10T11:32:11.500038",
+  "total_cycles": 50,
+  "esi": 57.1,
+  "rrs": 100.0,
+  "sfs": 76.3,
+  "osi": 5.6,
+  "lsg": 7.2,
+  "go_live_score": 84.1,
+  "verdict": "READY",
+  "verdict_detail": "Edge estable, baja deriva, alta fidelidad",
+  "edge_drift_detected": false,
+  "distribution_ok": false,
+  "memory_stability": 46.8,
+  "avg_coherence": 90.4,
+  "et_frequency_ratio": 3.87
+}

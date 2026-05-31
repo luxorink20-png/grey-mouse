@@ -1,0 +1,52 @@
+# ── Credentials & secrets ──────────────────────────────────────────
+.sg_config
+.env
+*.env
+
+# ── Large data directories ─────────────────────────────────────────
+logs/
+recordings/
+recordings_tick/
+outcomes/
+expansion_outcomes/
+historical_context/
+reports/
+simulation/engine_sessions/
+simulation/synthetic_sessions/
+simulation/stressed_sessions/
+simulation/treadmill/
+simulation/fragments/
+
+# ── Temp / scratch files ───────────────────────────────────────────
+tmp/
+tmp_*.txt
+_*.mp3
+
+# ── Python artifacts ───────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Test / coverage ────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# ── Editor / OS / Claude ──────────────────────────────────────────
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Codegraph output ───────────────────────────────────────────────
+codegraph.html

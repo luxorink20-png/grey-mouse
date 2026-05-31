@@ -1,0 +1,24 @@
+{
+  "volume_profile": {
+    "VAH": 7175.0,
+    "POC": 7160.0,
+    "VAL": 7145.0
+  },
+  "spotgamma": {
+    "call_wall": 7250.0,
+    "put_wall": 7050.0,
+    "zero_gamma": 7140.0,
+    "volatility_trigger": 7155.0,
+    "hpz": 7162.0
+  },
+  "session": {
+    "prev_high": 7190.0,
+    "prev_low": 7130.0,
+    "prev_close": 7160.0,
+    "open_price": 7155.0,
+    "onh": 7200.0,
+    "onl": 7130.0,
+    "ibh": 7167.5,
+    "ibl": 7142.5
+  }
+}
