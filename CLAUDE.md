@@ -112,6 +112,7 @@ engine_view.py        EngineView — terminal dashboard
 | `edge_validation.py` | 9-phase scientific edge validation | `python edge_validation.py` |
 | `robustness_audit.py` | 9-phase edge robustness audit (concentration/resilience/ESS) | `python robustness_audit.py` |
 | `failure_investigation.py` | 9-phase edge failure investigation (failure signatures/decay/autopsy) | `python failure_investigation.py` |
+| `counterfactual_edge_audit.py` | 9-phase counterfactual edge audit (how much edge is destroyed by each context) | `python counterfactual_edge_audit.py` |
 | `simulation/replay_treadmill.py` | GO-LIVE readiness score | `python simulation/replay_treadmill.py` |
 
 ---
@@ -314,6 +315,7 @@ Full report: `QA_AUDIT_REPORT.md`
 | **Result**: WR=38.7%, PF=1.56, Exp=+2.61 pts/trade, Verdict=INCONCLUSO | ✅ done |
 | `robustness_audit.py` — 9-phase robustness audit (concentration, resilience, ESS) | ✅ done |
 | `failure_investigation.py` — 9-phase failure investigation (decay, autopsy, signatures) | ✅ done |
+| `counterfactual_edge_audit.py` — 9-phase counterfactual audit (damage quantification, purity score) | ✅ done |
 
 ---
 
