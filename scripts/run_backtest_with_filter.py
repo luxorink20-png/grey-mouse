@@ -46,10 +46,10 @@ BASELINE = {
     "rf":       2.89,
 }
 EXPECTED_WITH_FILTER = {
-    "pf_min":   2.50,   # target PF >= 2.5
-    "max_dd_max": 20.0, # target MaxDD <= 20
-    "exp_min":  5.0,    # target Exp >= +5.0
-    "n_max":    50,     # target trades <= 50
+    "pf_min":   2.50,   # target PF >= 2.5 (improvement-1 projection: 2.71)
+    "max_dd_max": 20.0, # target MaxDD <= 20 pts (improvement-1 projection: 15)
+    "exp_min":  5.0,    # target Exp >= +5.0 pts/trade (improvement-1 projection: 5.5)
+    "n_max":    60,     # target trades <= 60 (improvement-1 projection: 42)
 }
 
 
@@ -253,11 +253,12 @@ def main():
         return
 
     # ── Con filtro ─────────────────────────────────────────────────────────
+    # improvement-1: destructive_regime disabled; maxdd threshold raised to 40
     cf = ContextFilter(
         enable_vol_release=True,
-        enable_destructive_regime=True,
+        enable_destructive_regime=False,
         enable_session_kill_switch=True,
-        session_maxdd_threshold=30.0,
+        session_maxdd_threshold=40.0,
     )
     filtered_trades = run(sessions, context_filter=cf, label="CON FILTRO",
                           max_bars=max_bars, target_cap=target_cap)

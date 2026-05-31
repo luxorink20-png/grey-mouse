@@ -33,9 +33,9 @@ _ET           = timezone(timedelta(hours=-4))   # EDT (UTC-4)
 _MEDIODIA_START = 13    # 13:00 ET — inicio franja mediodía destructiva
 _MEDIODIA_END   = 15    # 15:00 ET — fin franja mediodía
 
-_ATR_RATIO_THRESHOLD    = 1.5   # ATR actual > 1.5x media → alta volatilidad
-_VOLUME_RATIO_THRESHOLD = 2.0   # volumen actual > 2.0x media → alta actividad
-_ACTIVITY_RATIO_THRESHOLD = 3.0 # trades/barra > 3.0x media → alta frecuencia
+_ATR_RATIO_THRESHOLD    = 2.0   # ATR actual > 2.0x media → alta volatilidad (moderado, improvement-1)
+_VOLUME_RATIO_THRESHOLD = 2.5   # volumen actual > 2.5x media → alta actividad (moderado, improvement-1)
+# _ACTIVITY_RATIO_THRESHOLD removed — improvement-1 uses only 2 checks (ATR + volume)
 _MIN_BARS_FOR_DYNAMIC   = 10    # barras mínimas antes de activar filtro dinámico
 
 _DEFAULT_MAXDD_THRESHOLD = 30.0 # MaxDD de sesión antes de kill switch (pts)
@@ -67,7 +67,7 @@ class ContextFilter:
         self,
         *,
         enable_vol_release: bool = True,
-        enable_destructive_regime: bool = True,
+        enable_destructive_regime: bool = False,   # improvement-1: disabled (too aggressive, eliminates borderline trades)
         enable_session_kill_switch: bool = True,
         session_maxdd_threshold: float = _DEFAULT_MAXDD_THRESHOLD,
         atr_window: int = 20,
@@ -244,17 +244,12 @@ class ContextFilter:
         avg_vol = sum(self._vol_history) / max(len(self._vol_history), 1)
         high_volume = avg_vol > 0 and cur_vol > avg_vol * _VOLUME_RATIO_THRESHOLD
 
-        # Check 4: actividad (trades por barra)
-        cur_act = float(bar.get("trades", 0))
-        avg_act = sum(self._act_history) / max(len(self._act_history), 1)
-        high_activity = avg_act > 0 and cur_act > avg_act * _ACTIVITY_RATIO_THRESHOLD
-
-        if is_midday and high_volatility and high_volume and high_activity:
+        # improvement-1: only 2 checks needed (ATR + volume); activity check removed
+        if is_midday and high_volatility and high_volume:
             return (
                 f"hour={hour_et}ET "
                 f"ATR={cur_atr:.2f}/{avg_atr:.2f}({cur_atr/max(avg_atr,0.01):.1f}x) "
-                f"vol={cur_vol:.0f}/{avg_vol:.0f}({cur_vol/max(avg_vol,0.01):.1f}x) "
-                f"act={cur_act:.0f}/{avg_act:.0f}({cur_act/max(avg_act,0.01):.1f}x)"
+                f"vol={cur_vol:.0f}/{avg_vol:.0f}({cur_vol/max(avg_vol,0.01):.1f}x)"
             )
         return None
 
