@@ -2,48 +2,49 @@
 #  GIBBZ SMC COP — event_engine.py
 #  Institutional Order Flow Classifier v3.0
 #
-#  CAMBIOS v3.0:
-#  - Micro rango integrado directamente en el engine
-#  - Breakout desde micro rango detectado aquí
-#  - price_move, dead_zone, micro_range en context
-#  - Clasificación más precisa de INTENTO vs ruido
-#  - Delta coherente con dirección = bonus de confianza
+#  v3.0 changes:
+#  - Micro range detection integrated directly into the engine
+#  - Breakout from micro range detected here
+#  - price_move, dead_zone, micro_range exposed in context
+#  - More precise INTENTO vs noise classification
+#  - Delta coherent with direction = confidence bonus
 # ╚══════════════════════════════════════════════════════════════════╝
 
 from collections import deque
+from typing import Deque, Optional
 
 
 class EventEngine:
 
-    THRESHOLD_INTENTO = 2.0
-    THRESHOLD_FALLO   = 2.0
-    THRESHOLD_ACUMULACION  = 1.5
-    WARMUP_BARS            = 3
+    THRESHOLD_INTENTO     = 2.0
+    THRESHOLD_FALLO       = 2.0
+    THRESHOLD_ACUMULACION = 1.5
+    WARMUP_BARS           = 3
 
-    # Rango muerto
+    # Dead zone — sustained low-amplitude, low-momentum chop
     DEAD_ZONE_BARS         = 5
     DEAD_ZONE_MAX_MOVE     = 1.0
     DEAD_ZONE_MAX_MOMENTUM = 0.5
 
-    # Micro rango (≤ 8 ticks de 0.25 = 2.0 puntos, mínimo 5 velas)
-    MICRO_RANGE_MAX_SIZE   = 2.0    # 8 ticks × 0.25
-    MICRO_RANGE_MIN_BARS   = 5
-    MICRO_BREAKOUT_TICKS   = 1.0    # 4 ticks mínimo para breakout (4 × 0.25)
+    # Micro range — ≤ 8 ticks (2.0 pts in MES/MNQ), minimum 5 bars
+    MICRO_RANGE_MAX_SIZE = 2.0   # 8 ticks × 0.25
+    MICRO_RANGE_MIN_BARS = 5
+    MICRO_BREAKOUT_TICKS = 1.0   # minimum 4 ticks for a valid breakout (4 × 0.25)
 
-    def __init__(self, window: int = 10):
-        self._prices      = deque(maxlen=window)
-        self._deltas      = deque(maxlen=window)
-        self._price_moves = deque(maxlen=self.DEAD_ZONE_BARS)
-        self._highs       = deque(maxlen=self.MICRO_RANGE_MIN_BARS + 5)
-        self._lows        = deque(maxlen=self.MICRO_RANGE_MIN_BARS + 5)
+    def __init__(self, window: int = 10) -> None:
+        self._prices:      Deque[float] = deque(maxlen=window)
+        self._deltas:      Deque[float] = deque(maxlen=window)
+        self._price_moves: Deque[float] = deque(maxlen=self.DEAD_ZONE_BARS)
+        self._highs:       Deque[float] = deque(maxlen=self.MICRO_RANGE_MIN_BARS + 5)
+        self._lows:        Deque[float] = deque(maxlen=self.MICRO_RANGE_MIN_BARS + 5)
         self.last_event   = "INIT"
         self._bar_count   = 0
 
-        # Estado micro rango
-        self._micro_range_high  = 0.0
-        self._micro_range_low   = 0.0
-        self._micro_range_bars  = 0
-        self._micro_active      = False
+        # Micro range state
+        self._micro_range_high = 0.0
+        self._micro_range_low  = 0.0
+        self._micro_range_bars = 0
+        self._micro_active     = False
 
     def process(self, raw_data: dict) -> dict:
         price      = float(raw_data.get("price",      0))
@@ -98,7 +99,7 @@ class EventEngine:
                       and abs(price_move) < self.THRESHOLD_ACUMULACION)
         dead_zone  = self._detect_dead_zone(momentum)
 
-        # ── MICRO RANGO ────────────────────────────────────────────
+        # ── Micro range detection ──────────────────────────────────
         micro_active, micro_high, micro_low, micro_breakout = \
             self._detect_micro_range(price, high, low)
 
@@ -120,21 +121,22 @@ class EventEngine:
         )
 
     # ──────────────────────────────────────────────────────────────
-    #  MICRO RANGO
+    #  MICRO RANGE
     # ──────────────────────────────────────────────────────────────
 
     def _detect_micro_range(self, price: float,
-                             high: float, low: float) -> tuple:
+                             high: float,
+                             low: float) -> tuple:
         """
-        Detecta micro rango institucional:
-        - Rango ≤ 8 ticks (2.0 puntos en MES/MNQ)
-        - Duración ≥ 5 velas
-        - Precio lateral
+        Detects an institutional micro range:
+        - Range size ≤ 8 ticks (2.0 pts in MES/MNQ)
+        - Duration ≥ 5 bars
+        - Lateral price action
 
-        Detecta breakout:
-        - Precio rompe rango + 4 ticks (1.0 punto)
+        Detects breakout:
+        - Price exceeds range ± 4 ticks (1.0 pt)
 
-        Retorna (active, range_high, range_low, breakout_dir)
+        Returns (active, range_high, range_low, breakout_dir)
         breakout_dir: "UP" | "DOWN" | None
         """
         highs = list(self._highs)
@@ -143,31 +145,30 @@ class EventEngine:
         if len(highs) < self.MICRO_RANGE_MIN_BARS:
             return False, 0.0, 0.0, None
 
-        # Calcular rango de últimas N velas
+        # Compute range over the last N bars
         recent_highs = highs[-self.MICRO_RANGE_MIN_BARS:]
         recent_lows  = lows[-self.MICRO_RANGE_MIN_BARS:]
         r_high       = max(recent_highs)
         r_low        = min(recent_lows)
         r_size       = r_high - r_low
 
-        # Verificar si está en micro rango
         if r_size <= self.MICRO_RANGE_MAX_SIZE:
-            self._micro_active    = True
+            self._micro_active     = True
             self._micro_range_high = r_high
             self._micro_range_low  = r_low
             self._micro_range_bars += 1
         else:
-            # Verificar breakout si estábamos en rango
+            # Check for breakout if we were inside a range
             if self._micro_active:
                 if price > self._micro_range_high + self.MICRO_BREAKOUT_TICKS:
-                    self._micro_active    = False
+                    self._micro_active     = False
                     self._micro_range_bars = 0
                     return False, self._micro_range_high, self._micro_range_low, "UP"
                 if price < self._micro_range_low - self.MICRO_BREAKOUT_TICKS:
-                    self._micro_active    = False
+                    self._micro_active     = False
                     self._micro_range_bars = 0
                     return False, self._micro_range_high, self._micro_range_low, "DOWN"
-            self._micro_active    = False
+            self._micro_active     = False
             self._micro_range_bars = 0
             return False, 0.0, 0.0, None
 
@@ -188,14 +189,19 @@ class EventEngine:
                 and abs(momentum) < self.DEAD_ZONE_MAX_MOMENTUM)
 
     # ──────────────────────────────────────────────────────────────
-    #  CLASIFICACIÓN
+    #  CLASSIFICATION
     # ──────────────────────────────────────────────────────────────
 
-    def _classify(self, price_move, delta, momentum,
-                  absorption, recent_deltas, volume,
-                  micro_breakout) -> tuple:
+    def _classify(self,
+                  price_move:    float,
+                  delta:         float,
+                  momentum:      float,
+                  absorption:    bool,
+                  recent_deltas: list,
+                  volume:        float,
+                  micro_breakout: Optional[str]) -> tuple:
 
-        # Breakout de micro rango → INTENTO con alta confianza
+        # Micro range breakout → INTENTO with high confidence
         if micro_breakout == "UP":
             return ("INTENTO", 88,
                     f"Breakout micro rango alcista. Mov:{price_move:+.2f}")
@@ -203,7 +209,7 @@ class EventEngine:
             return ("INTENTO", 88,
                     f"Breakout micro rango bajista. Mov:{price_move:+.2f}")
 
-        # AGOTAMIENTO
+        # AGOTAMIENTO — reversal after a prior INTENTO
         if (self.last_event == "INTENTO"
                 and abs(price_move) > self.THRESHOLD_FALLO
                 and (price_move < 0 if delta > 0 else price_move > 0)):
@@ -225,22 +231,22 @@ class EventEngine:
             return ("INTENTO", conf,
                     f"Impulso bajista. Δ:{delta:+.0f} Mov:{price_move:+.2f}")
 
-        # FALLO ALCISTA
+        # FALLO ALCISTA — upward move absorbed by sellers
         if price_move > self.THRESHOLD_FALLO and delta < -50:
             return ("FALLO", 70,
                     f"Intento alcista absorbido. Δ:{delta:+.0f}")
 
-        # FALLO BAJISTA
+        # FALLO BAJISTA — downward move absorbed by buyers
         if price_move < -self.THRESHOLD_FALLO and delta > 50:
             return ("FALLO", 70,
                     f"Intento bajista absorbido. Δ:{delta:+.0f}")
 
-        # ABSORCIÓN
+        # ABSORCIÓN — large delta with no price displacement
         if absorption:
             return ("ACUMULACIÓN", 75,
                     "Absorción detectada. Precio sin desplazamiento.")
 
-        # RANGO ESTRECHO
+        # NARROW RANGE
         if abs(price_move) < self.THRESHOLD_ACUMULACION:
             conf = max(40, 75 - int(abs(price_move) * 10))
             return ("ACUMULACIÓN", conf,
@@ -250,29 +256,37 @@ class EventEngine:
                 f"Sin señal dominante. Mov:{price_move:+.2f}")
 
     # ──────────────────────────────────────────────────────────────
-    #  RESULT
+    #  RESULT BUILDER
     # ──────────────────────────────────────────────────────────────
 
     @staticmethod
-    def _result(event, confidence, reason,
-                delta, volume, absorption, momentum,
-                price_move, dead_zone,
-                micro_active, micro_high, micro_low,
-                micro_breakout) -> dict:
+    def _result(event:          str,
+                confidence:     int,
+                reason:         str,
+                delta:          float,
+                volume:         float,
+                absorption:     bool,
+                momentum:       float,
+                price_move:     float,
+                dead_zone:      bool,
+                micro_active:   bool,
+                micro_high:     float,
+                micro_low:      float,
+                micro_breakout: Optional[str]) -> dict:
         return {
             "event":      event,
             "confidence": confidence,
             "reason":     reason,
             "context": {
-                "delta":           round(delta,      2),
-                "volume":          round(volume,     2),
-                "absorption":      absorption,
-                "momentum":        round(momentum,   4),
-                "price_move":      round(price_move, 2),
-                "dead_zone":       dead_zone,
-                "micro_active":    micro_active,
-                "micro_high":      round(micro_high, 2),
-                "micro_low":       round(micro_low,  2),
-                "micro_breakout":  micro_breakout,
+                "delta":          round(delta,      2),
+                "volume":         round(volume,     2),
+                "absorption":     absorption,
+                "momentum":       round(momentum,   4),
+                "price_move":     round(price_move, 2),
+                "dead_zone":      dead_zone,
+                "micro_active":   micro_active,
+                "micro_high":     round(micro_high, 2),
+                "micro_low":      round(micro_low,  2),
+                "micro_breakout": micro_breakout,
             }
         }

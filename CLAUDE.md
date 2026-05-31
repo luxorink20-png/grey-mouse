@@ -213,12 +213,12 @@ Full report: `QA_AUDIT_REPORT.md`
 - **[M5]** ✅ `voice_engine._loop` — `try/except` guard + `_log.error` + state reset
 - **[M6]** ✅ `regime_morpher.py:12` — `TODO` → `INVARIANTE`
 
-### P3 — Low (mostly resolved)
+### P3 — Low ✅ (all resolved 2026-05-30)
 - **[L1]** ✅ `README.md` written
 - **[L2]** ✅ `pytest.ini` + 140/140 tests passing
-- **[L3]** ongoing — Spanish→English comment migration (incremental)
+- **[L3]** ✅ English comments in `bar_aggregator`, `event_engine`, `confluence_engine`, `levels`
 - **[L4]** ✅ `tmp/` created; 7 scratch files moved; covered by `.gitignore`
-- **[L5]** ongoing — type hint expansion (incremental)
+- **[L5]** ✅ Type hints + `mypy.ini` — 0 errors on 6 core pipeline files
 
 ---
 
@@ -234,6 +234,7 @@ Full report: `QA_AUDIT_REPORT.md`
 - **Logging:** Use `get_logger(__name__)` from `log_config.py` — no bare `print("[ERROR]")`
 - **Config:** Feature flags go in `config.py`; engine thresholds stay in their class constants
 - **Tests:** One test file per module. Fixtures in `conftest.py`. No voice/audio in unit tests — mock `VoiceEngine`
+- **Type hints:** All new code in the core pipeline must be fully typed. Run `python -m mypy <file>` before committing — `mypy.ini` enforces strict checking on `bar_aggregator`, `event_engine`, `levels`, `market_feed`, `config`, `log_config`
 - **MD files:** Update all relevant `.md` files every session that modifies code (see Section 0)
 
 ---
@@ -270,13 +271,13 @@ Full report: `QA_AUDIT_REPORT.md`
 | E2E: replay from JSONL + UDP parse | ✅ 15 tests |
 | `pytest.ini` + `pytest-cov` | ✅ done |
 
-### Sprint 4 — Documentation & Developer Experience — IN PROGRESS
+### Sprint 4 — Documentation & Developer Experience — COMPLETE ✅
 | Task | Status |
 |------|--------|
 | `README.md` | ✅ done |
-| Standardize comments to English (core pipeline) | ongoing |
+| Standardize comments to English (core pipeline) | ✅ done — 4 files |
 | Move temp files to `tmp/` | ✅ done |
-| Add `mypy` to CI | not started |
+| `mypy.ini` — strict checking on core pipeline | ✅ done — 0 errors |
 
 ### Sprint 5 — Architecture Improvements — NOT STARTED
 | Task | Benefit |

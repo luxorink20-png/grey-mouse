@@ -1,12 +1,12 @@
 """
 GIBBZ Bar Aggregator
-Acumula trades individuales del bridge y genera barras
-con volumen, delta, high/low reales.
+Accumulates individual ticks from the bridge and produces bars
+with real volume, delta, high/low.
 
-Modos:
-  TIME_BASED  — barra cada N segundos (default: 5s)
-  VOLUME_BASED — barra cada N contratos
-  TICK_BASED  — barra cada N ticks
+Modes:
+  TIME_BASED   — one bar every N seconds (default: 5s)
+  VOLUME_BASED — one bar every N contracts
+  TICK_BASED   — one bar every N ticks
 """
 
 import time
@@ -14,11 +14,11 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
-# ── CONFIGURACIÓN ──────────────────────────────────────────────────
+# ── Bar-closure parameters ─────────────────────────────────────────
 BAR_MODE    = "TIME"   # "TIME" | "VOLUME" | "TICK"
-BAR_SECONDS = 5        # segundos por barra (TIME mode)
-BAR_VOLUME  = 100      # contratos por barra (VOLUME mode)
-BAR_TICKS   = 50       # ticks por barra (TICK mode)
+BAR_SECONDS = 5        # seconds per bar (TIME mode)
+BAR_VOLUME  = 100      # contracts per bar (VOLUME mode)
+BAR_TICKS   = 50       # ticks per bar (TICK mode)
 # ──────────────────────────────────────────────────────────────────
 
 
@@ -64,18 +64,14 @@ class BarAggregator:
         self.volume  = volume
         self.ticks   = ticks
 
-        self._bar:      Optional[Bar] = None
-        self._bar_start: float        = 0.0
+        self._bar:           Optional[Bar]  = None
+        self._bar_start:     float          = 0.0
         self._completed_bar: Optional[dict] = None
 
-    # ── API PÚBLICA ────────────────────────────────────────────────
+    # ── Public API ─────────────────────────────────────────────────
 
     def process(self, tick: dict) -> Optional[dict]:
-        """
-        Recibe un tick individual del bridge.
-        Retorna una barra completa cuando se cumple la condición,
-        o None si la barra sigue acumulando.
-        """
+        """Receive one tick. Returns a completed bar dict when the bar closes, else None."""
         self._completed_bar = None
 
         if self._bar is None:
@@ -84,6 +80,7 @@ class BarAggregator:
         self._update_bar(tick)
 
         if self._should_close():
+            assert self._bar is not None
             self._completed_bar = self._bar.to_dict()
             self._bar = None
             return self._completed_bar
@@ -91,22 +88,22 @@ class BarAggregator:
         return None
 
     def get_partial(self) -> Optional[dict]:
-        """Retorna la barra parcial actual (para display en tiempo real)."""
+        """Return the current in-progress bar (for real-time display)."""
         if self._bar is None:
             return None
         return self._bar.to_dict()
 
     def force_close(self) -> Optional[dict]:
-        """Fuerza el cierre de la barra actual (útil al detener engine)."""
+        """Force-close the current bar (call when stopping the engine)."""
         if self._bar is not None and self._bar.trades > 0:
             result = self._bar.to_dict()
             self._bar = None
             return result
         return None
 
-    # ── INTERNOS ──────────────────────────────────────────────────
+    # ── Internals ─────────────────────────────────────────────────
 
-    def _open_bar(self, tick: dict):
+    def _open_bar(self, tick: dict) -> None:
         price      = float(tick.get("price", 0))
         self._bar  = Bar(
             open      = price,
@@ -117,21 +114,22 @@ class BarAggregator:
         )
         self._bar_start = time.time()
 
-    def _update_bar(self, tick: dict):
-        b = self._bar
-        price      = float(tick.get("price",      0))
-        ask_vol    = float(tick.get("ask_volume",  tick.get("volume", 0)))
-        bid_vol    = float(tick.get("bid_volume",  0))
-        vol        = float(tick.get("volume",      ask_vol + bid_vol))
+    def _update_bar(self, tick: dict) -> None:
+        assert self._bar is not None  # always called after _open_bar
+        b       = self._bar
+        price   = float(tick.get("price",      0))
+        ask_vol = float(tick.get("ask_volume",  tick.get("volume", 0)))
+        bid_vol = float(tick.get("bid_volume",  0))
+        vol     = float(tick.get("volume",      ask_vol + bid_vol))
 
-        b.close      = price
-        b.high       = max(b.high, price)
-        b.low        = min(b.low,  price)
-        b.volume    += vol
+        b.close       = price
+        b.high        = max(b.high, price)
+        b.low         = min(b.low,  price)
+        b.volume     += vol
         b.ask_volume += ask_vol
         b.bid_volume += bid_vol
-        b.delta      = b.ask_volume - b.bid_volume
-        b.trades    += int(tick.get("trades", 1))
+        b.delta       = b.ask_volume - b.bid_volume
+        b.trades     += int(tick.get("trades", 1))
         b.tick_count += 1
 
     def _should_close(self) -> bool:

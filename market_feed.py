@@ -80,17 +80,17 @@ class MarketFeed:
     def __init__(self,
                  host: str = "127.0.0.1",
                  port: int = 9999):
-        self._host      = host
-        self._port      = port
-        self._socket    = None
-        self._thread    = None
-        self._running   = False
-        self._latest    = None
-        self._lock      = threading.Lock()
-        self._count     = 0
-        self._errors    = 0
-        self._last_raw  = ""
-        self._connected = False
+        self._host:      str                             = host
+        self._port:      int                             = port
+        self._socket:    Optional[socket.socket]         = None
+        self._thread:    Optional[threading.Thread]      = None
+        self._running:   bool                            = False
+        self._latest:    Optional[dict]                  = None
+        self._lock:      threading.Lock                  = threading.Lock()
+        self._count:     int                             = 0
+        self._errors:    int                             = 0
+        self._last_raw:  str                             = ""
+        self._connected: bool                            = False
 
     # ──────────────────────────────────────────────────────────────
     #  START / STOP
@@ -168,6 +168,7 @@ class MarketFeed:
     # ──────────────────────────────────────────────────────────────
 
     def _receive_loop(self) -> None:
+        assert self._socket is not None  # set by start() before thread launch
         last_packet_time = 0.0
         while self._running:
             try:

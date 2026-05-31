@@ -43,9 +43,9 @@ Track progress here. Mark items `[x]` as completed.
 
 - [x] **[L1]** Write `README.md` — overview, architecture, prerequisites, setup, config reference, test commands
 - [x] **[L2]** `pytest.ini` + test suite — 140/140 passing (unit + integration + e2e)
-- [ ] **[L3]** Standardize comment language to English in core pipeline (incremental, ongoing)
+- [x] **[L3]** Standardize comment language to English in core pipeline — `bar_aggregator.py`, `event_engine.py`, `confluence_engine.py`, `levels.py`
 - [x] **[L4]** Move `tmp_*.txt` and `_*.mp3` scratch files to `tmp/`; `tmp/` added to `.gitignore`
-- [ ] **[L5]** Add type hints to `event_engine.py`, `confluence_engine.py`, `bar_aggregator.py` (incremental, ongoing)
+- [x] **[L5]** Type hints added to `bar_aggregator.py`, `event_engine.py`, `levels.py`, `market_feed.py`, `config.py`, `log_config.py`, `confluence_engine.py` — 0 mypy errors on core pipeline
 
 ---
 
@@ -70,13 +70,17 @@ Track progress here. Mark items `[x]` as completed.
 | M6 | done ✅ | Ambiguous TODO clarified to INVARIANTE |
 | L1 | done ✅ | `README.md` written |
 | L2 | done ✅ | 140/140 tests passing |
-| L3 | ongoing | Incremental — Spanish comments in core pipeline files |
+| L3 | done ✅ | English comments in bar_aggregator, event_engine, confluence_engine, levels |
 | L4 | done ✅ | `tmp/` dir created; 7 scratch files moved; `.gitignore` covers it |
-| L5 | ongoing | Incremental — type hints in event/confluence/bar engines |
+| L5 | done ✅ | 0 mypy errors on 6 core pipeline files; `mypy.ini` configured |
 
 ---
 
-## Remaining (ongoing)
+## All audit findings resolved ✅
 
-- **L3** — Spanish → English comment migration (incremental, no functional impact)
-- **L5** — Type hint coverage expansion (incremental, non-breaking)
+All 19 P0–P3 findings from `QA_AUDIT_REPORT.md` are resolved as of 2026-05-30.
+
+### Remaining Sprint 4–5 items (not from original audit)
+
+- **Sprint 4** — `mypy` configured (`mypy.ini`); running on core pipeline ✅
+- **Sprint 5** — Architecture: IPC TCP socket, Redis/SQLite state, SpotGamma API, Docker (not started)

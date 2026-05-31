@@ -22,6 +22,7 @@
 
 from dataclasses import dataclass, field
 from collections import deque
+from typing import Optional
 import math
 
 
@@ -32,7 +33,7 @@ SCORE_BANDS = [
     (0,   47, "LOW QUALITY",         "IGNORE"),
 ]
 
-def classify_score(score: int) -> tuple:
+def classify_score(score: int) -> tuple[str, str]:
     for lo, hi, label, action in SCORE_BANDS:
         if lo <= score <= hi:
             return label, action
@@ -104,15 +105,16 @@ class ConfluenceEngine:
         self._consecutive = 0
         self._last_class  = ""
 
-    def evaluate(self, event_result: dict,
+    def evaluate(self,
+                 event_result:         dict,
                  level_context,
-                 confirmation=None,
-                 session_regime=None,
-                 continuation=None,
+                 confirmation=         None,
+                 session_regime=       None,
+                 continuation=         None,
                  adaptive_continuation=None,
-                 market_env=None,
-                 edge_learning=None,
-                 poc_acceptance=None) -> ConfluenceResult:
+                 market_env=           None,
+                 edge_learning=        None,
+                 poc_acceptance=       None) -> ConfluenceResult:
 
         event      = event_result.get("event",      "NONE")
         confidence = event_result.get("confidence", 0)
@@ -218,8 +220,8 @@ class ConfluenceEngine:
                 bonus += 24
                 breakdown["adjustments"]["short_covering"] = +24
 
-            # Regime confidence baja = régimen no clasificado = penalizar score
-            # Este es el factor que causaba score=96 en BALANCED_DAY conf=30%
+            # Low regime confidence = unclassified regime = penalize score
+            # This was the factor causing score=96 on BALANCED_DAY conf=30%
             if reg_conf < 40:
                 rc_pen = int((40 - reg_conf) * 0.6)   # máx ~24 puntos a conf=0
                 bonus -= rc_pen
@@ -265,8 +267,8 @@ class ConfluenceEngine:
                         bonus -= 5
                         breakdown["adjustments"]["weak_trend"] = -5
                 elif regime_nm == "SHORT_COVERING":
-                    # WEAK en SC: cap 60 — deliberadamente por debajo de MODERATE (65+)
-                    # para mantener separación WEAK < MODERATE < REAL < EXPLOSIVE
+                    # WEAK in SHORT_COVERING: cap 60 — deliberately below MODERATE (65+)
+                    # to maintain separation WEAK < MODERATE < REAL < EXPLOSIVE
                     hard_cap = 60
                     bonus   -= 8
                     breakdown["adjustments"]["weak_sc"] = -8
@@ -280,9 +282,9 @@ class ConfluenceEngine:
                     # MODERATE fuera de trend: penalización base -10
                     bonus -= 10
                     breakdown["adjustments"]["moderate_nontrend"] = -10
-                    # FIX 2: MODERATE en SHORT_COVERING con debilidades acumuladas
-                    # WR=50% indica que setups marginales destruyen edge
-                    # Penalizar adicionalmente solo cuando múltiples señales son débiles
+                    # MODERATE in SHORT_COVERING with accumulated weaknesses
+                    # WR=50% signals that marginal setups destroy edge
+                    # Extra penalty only when multiple signals are weak
                     if regime_nm == "SHORT_COVERING":
                         _mod_dp  = getattr(confirmation, "delta_persistence",    60)
                         _mod_acc = getattr(confirmation, "acceptance_score",     60)
@@ -293,14 +295,14 @@ class ConfluenceEngine:
                             _mod_eff < 0.65,  # efficiency moderada
                         ])
                         if _weak_signals >= 2:
-                            # Dos o mas debilidades = setup MODERATE marginal en SC
+                            # Two or more weaknesses = marginal MODERATE setup in SC
                             bonus -= 8
                             breakdown["adjustments"]["moderate_sc_weak"] = -8
                 else:
                     bonus += 2
                     breakdown["adjustments"]["moderate_trend"] = +2
             elif bq_type == "REAL":
-                # PATCH 1: REAL mantener pero no dominar (+5 sobre base existente)
+                # REAL — keep the boost but don't let it dominate (+5 over existing base)
                 _ac_p = 0
                 if adaptive_continuation is not None:
                     _ac_p = getattr(adaptive_continuation, "continuation_probability", 0)
@@ -542,11 +544,11 @@ class ConfluenceEngine:
             agg_no_r  = getattr(poc_acceptance, "aggression_without_result", False)
             auc_score = getattr(poc_acceptance, "auction_failure_score",    0)
 
-            # Favorable: aceptación confirmada
+            # Favorable: acceptance confirmed
             if acc_conf and poc_sc >= 65:
                 bonus += 8
                 breakdown["adjustments"]["poc_accepted"] = +8
-            # Warning: absorción o trampa
+            # Warning: absorption or trap
             if absorb >= 65:
                 bonus -= 10
                 breakdown["adjustments"]["poc_absorption"] = -10
@@ -573,23 +575,23 @@ class ConfluenceEngine:
 
         # ══ FACTORES ADICIONALES ══════════════════════════════════
 
-        # MICRO-PENALIZACIONES CONTEXTUALES SUAVES
-        # Acumulativas, no bloqueantes, estructuralmente justificadas.
-        # Crean dispersión orgánica sin targeting a trades específicos.
+        # SOFT CONTEXTUAL MICRO-PENALTIES
+        # Cumulative, non-blocking, structurally justified.
+        # Create organic score dispersion without targeting specific trades.
         _mp_total = 0
         if session_regime is not None:
             _vol   = getattr(session_regime, "volatility_state", "NORMAL")
             _rconf = getattr(session_regime, "regime_confidence", 70)
             _tstr  = getattr(session_regime, "trend_strength",    50)
-            # HIGH volatility en setup no-EXPLOSIVE = penalizar suave
+            # HIGH volatility on non-EXPLOSIVE setup = soft penalty
             if _vol in ("HIGH", "EXTREME") and bq_type not in ("EXPLOSIVE",):
                 _mp_total -= 3
                 breakdown["adjustments"]["ctx_vol_high"] = -3
-            # Régimen con confianza media = contexto no confirmado
+            # Mid-confidence regime = unconfirmed context
             if 40 <= _rconf < 60:
                 _mp_total -= 2
                 breakdown["adjustments"]["ctx_regime_uncertain"] = -2
-            # Trend débil en TREND_DAY = trend falso
+            # Weak trend on TREND_DAY = false trend
             if getattr(session_regime, "session_regime", "") == "TREND_DAY" and _tstr < 65:
                 _mp_total -= 3
                 breakdown["adjustments"]["ctx_weak_trend"] = -3
@@ -597,11 +599,11 @@ class ConfluenceEngine:
         if confirmation is not None:
             _eff_ctx = getattr(confirmation, "expansion_efficiency", 0.6)
             _dp_ctx  = getattr(confirmation, "delta_persistence",    60)
-            # Efficiency moderada (no baja suficiente para penalizar ya, pero tampoco alta)
+            # Moderate efficiency — not low enough to penalize yet, not high enough to reward
             if 0.55 <= _eff_ctx < 0.70 and bq_type not in ("EXPLOSIVE", "REAL"):
                 _mp_total -= 2
                 breakdown["adjustments"]["ctx_moderate_eff"] = -2
-            # Delta persistence moderada en setup no-WEAK
+            # Moderate delta persistence on non-WEAK setup
             if 50 <= _dp_ctx < 70 and bq_type in ("REAL", "EXPLOSIVE"):
                 _mp_total -= 2
                 breakdown["adjustments"]["ctx_moderate_dp"] = -2
@@ -609,8 +611,7 @@ class ConfluenceEngine:
         if _mp_total != 0:
             bonus += _mp_total
 
-        # Narrativa UNCLEAR penaliza
-        # (se recibe via event_result si está disponible)
+        # UNCLEAR narrative penalizes score (received via event_result when available)
 
         # ACUMULACIÓN bonuses
         if event_key == "ACUMULACION":
@@ -674,9 +675,9 @@ class ConfluenceEngine:
         # ══ SCORE FINAL con CAP DINÁMICO ══════════════════════════
         raw_combined = base_score + bonus
 
-        # DIMINISHING RETURNS: compresión suave para scores altos
-        # Evita saturación en 95-100 y restaura dispersión orgánica
-        # Scores bajos (<80) no se tocan. Scores altos se comprimen progresivamente.
+        # DIMINISHING RETURNS: soft compression for high raw scores
+        # Prevents saturation at 95-100 and restores organic dispersion.
+        # Scores below 80 are untouched; higher scores compress progressively.
         # raw=90 → ~87, raw=100 → ~91, raw=110 → ~94
         if raw_combined > 80:
             excess    = raw_combined - 80
@@ -756,7 +757,7 @@ class ConfluenceEngine:
         if avg >= 48: return "MEDIUM QUALITY"
         return "LOW QUALITY / NOISE"
 
-    def last_high_quality(self):
+    def last_high_quality(self) -> Optional[ConfluenceResult]:
         for r in reversed(list(self._history)):
             if r.score >= 68:
                 return r

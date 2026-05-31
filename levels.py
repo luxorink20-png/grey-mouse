@@ -2,7 +2,7 @@
 #  GIBBZ SMC COP — levels.py
 #  Institutional Levels Context Engine
 #  VAH / VAL / POC + Proximity + Reaction Zones
-# ╔══════════════════════════════════════════════════════════════════╝
+# ╚══════════════════════════════════════════════════════════════════╝
 
 from dataclasses import dataclass
 from typing import Optional
@@ -64,7 +64,7 @@ class InstitutionalLevels:
         self._vwap      = vwap
         self._proximity = proximity_points
         self._hpz       = hpz_points
-        self._custom    = []
+        self._custom:   list[Level] = []
         self._levels    = self._build_levels()
 
     def get_context(self, price: float) -> LevelContext:
@@ -187,8 +187,8 @@ class InstitutionalLevels:
             return "BULLISH" if price < mid else "BEARISH"
         return "NEUTRAL"
 
-    def _build_summary(self, price, zone, nearest,
-                       dist, near_levels, hpz) -> str:
+    def _build_summary(self, price: float, zone: str, nearest: Level,
+                       dist: float, near_levels: list, hpz: bool) -> str:
         near_str = f" | {' '.join(near_levels)}" if near_levels else ""
         hpz_str  = " | HPZ" if hpz else ""
         return (
@@ -196,7 +196,7 @@ class InstitutionalLevels:
             f"[{nearest.name}: {dist:+.2f}pts]"
         )
 
-    def _build_levels(self) -> list:
+    def _build_levels(self) -> list[Level]:
         base = [
             Level("VAH", self._vah, "VAH"),
             Level("POC", self._poc, "POC"),
