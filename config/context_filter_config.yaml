@@ -1,0 +1,46 @@
+# GIBBZ Context Filter Configuration
+# Para desactivar un filtro: enabled: false
+# No modificar umbrales — son definiciones objetivas de mercado, no parametros optimizados
+
+context_filter:
+  enabled: true
+
+  filters:
+
+    vol_release:
+      enabled: true
+      description: >
+        Skippear sesiones/contextos VOL_RELEASE. PF interno=1.17, contribuye
+        87.5% del MaxDD con solo 22.7% del PnL. Confirmado en edge_contribution_audit.py
+        (n=74 trades, confianza FUERTE 78%).
+      mode:
+        backtest: session_type_metadata     # usa session_type del JSON de expansion
+        live: dynamic_detection             # ATR + volume + time-of-day
+      live_criteria:
+        midday_et_start: 13                 # hora inicio franja ET (no optimizado)
+        midday_et_end: 15                   # hora fin franja ET
+        atr_ratio_threshold: 1.5            # ATR actual > 1.5x media = alta volatilidad
+        volume_ratio_threshold: 2.0         # volumen actual > 2.0x media
+        activity_ratio_threshold: 3.0       # trades/barra > 3.0x media
+        min_bars_warmup: 10                 # barras minimas antes de activar filtro
+
+    destructive_regime:
+      enabled: true
+      description: >
+        Skippear cuando el regimen reciente muestra WR <25% y PF <0.8 (ultimos 10 trades).
+        Detecta condiciones como Marzo 2026 (PF=0.44) o Mediodia ET (PF=0.42).
+      min_trades: 5                         # trades minimos para evaluar regimen
+      wr_threshold: 0.25                    # WR < 25%
+      pf_threshold: 0.80                    # PF < 0.80
+
+    session_kill_switch:
+      enabled: true
+      description: >
+        Detener operaciones cuando el DrawDown de la sesion supera el umbral.
+        Baseline MaxDD = 95.75 pts. Target post-filtro MaxDD <= 20 pts.
+        Umbral conservador: 30 pts.
+      session_maxdd_threshold: 30.0         # pts — no optimizado, basado en objetivo de riesgo
+
+logging:
+  level: INFO
+  file: logs/gibbz.log                      # mismo archivo que el sistema (log_config.py)

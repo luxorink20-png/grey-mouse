@@ -318,6 +318,7 @@ Full report: `QA_AUDIT_REPORT.md`
 | `failure_investigation.py` — 9-phase failure investigation (decay, autopsy, signatures) | ✅ done |
 | `counterfactual_edge_audit.py` — 9-phase counterfactual audit (damage quantification, purity score) | ✅ done |
 | `edge_contribution_audit.py` — 9-phase contribution audit (who generates money vs damage, NEC score, dependency) | ✅ done |
+| `context_filter.py` — context filter module (VOL_RELEASE, destructive regime, session kill switch) | ✅ done |
 
 ---
 

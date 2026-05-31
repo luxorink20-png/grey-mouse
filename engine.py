@@ -30,6 +30,9 @@ from config import (
     USE_REAL_FEED, ENABLE_VOICE,
     UDP_HOST, UDP_PORT,
 )
+from context_filter import ContextFilter
+from log_config import get_logger as _get_logger
+_cf_log = _get_logger("context_filter.engine")
 
 # ── NIVELES DESDE ARCHIVO ──────────────────────────────────────────
 _levels_path = os.path.join(os.path.dirname(__file__), "levels.json")
@@ -86,6 +89,7 @@ _vwap_eng_rtr   = VWAPEngine()
 _fa_det_rtr     = FADetector(vah=VAH, val=VAL)
 _va80_det_rtr   = VA80Detector(vah=VAH, val=VAL, open_price=OPEN_PRICE)
 setup_router    = SetupRouter()
+_context_filter = ContextFilter()
 
 feed = MarketFeed(host=UDP_HOST, port=UDP_PORT) if USE_REAL_FEED else None
 
@@ -188,6 +192,8 @@ def run_engine():
                 time.sleep(0.01)
                 continue
 
+            _context_filter.update_bar(raw)
+
             result         = engine.process(raw)
             context        = levels.get_context(raw["price"])
             session_active = session.is_active_session()
@@ -196,6 +202,7 @@ def run_engine():
             if session_name != last_session:
                 if session_active:
                     voice.on_session_start(session_name)
+                    _context_filter.reset_session()
                 else:
                     voice.on_session_end()
                 last_session = session_name
@@ -261,12 +268,19 @@ def run_engine():
             )
 
             if risk_result.approved:
-                feedback.open_trade(
-                    risk_result  = risk_result,
-                    analysis     = analysis,
-                    narrative    = narrative,
-                    session_name = session_name,
-                )
+                _cf_skip, _cf_reason = _context_filter.should_skip(raw)
+                if _cf_skip:
+                    _cf_log.info(
+                        "CONTEXT SKIP | %s | setup=%s price=%.2f",
+                        _cf_reason, setup_r.signal_type, raw["price"],
+                    )
+                else:
+                    feedback.open_trade(
+                        risk_result  = risk_result,
+                        analysis     = analysis,
+                        narrative    = narrative,
+                        session_name = session_name,
+                    )
 
             closed_trade = feedback.update(raw["price"])
             fb_summary   = feedback.get_summary()
@@ -274,6 +288,10 @@ def run_engine():
             if closed_trade is not None:
                 direction = getattr(closed_trade, "direction", "NONE")
                 tr_result = getattr(closed_trade, "result",    "UNKNOWN")
+                _context_filter.register_trade(
+                    pnl=getattr(closed_trade, "pnl", 0.0),
+                    win=tr_result == "WIN",
+                )
                 tr_score  = getattr(closed_trade, "score",     0)
                 tr_zone   = getattr(closed_trade, "zone",      zone_key)
                 tr_narr   = getattr(closed_trade, "narrative", narr_key)

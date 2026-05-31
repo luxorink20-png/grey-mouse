@@ -90,8 +90,21 @@ class Trade:
 
 
 def run_session(session_date: str, recording_file: str,
-                max_bars: int, target_cap: float) -> list[BarData]:
-    """Run the full pipeline on one session and return bars with setup signals."""
+                max_bars: int, target_cap: float,
+                context_filter=None,
+                session_type: str = "") -> list[BarData]:
+    """Run the full pipeline on one session and return bars with setup signals.
+
+    Optional args:
+        context_filter: ContextFilter instance. When provided, sessions of
+            filtered type (e.g. VOL_RELEASE) return [] immediately.
+        session_type: session classification string from expansion metadata.
+    """
+    if context_filter is not None and session_type:
+        if context_filter.is_session_filtered(session_type):
+            print(f"  [CONTEXT FILTER] {session_date}: {session_type} → SKIP")
+            return []
+
     replay_path = RECORDINGS / recording_file
     if not replay_path.exists():
         print(f"  [SKIP] {session_date}: recording not found ({recording_file})")
