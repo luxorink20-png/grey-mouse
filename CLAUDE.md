@@ -329,6 +329,7 @@ Full report: `QA_AUDIT_REPORT.md`
 | `docs/paper_trading_setup.md` — paper trading protocol and transition criteria | ✅ done |
 | `scripts/level2_features_bar.py` — Level 2 proxy feature detection from 500-tick bars | ✅ done |
 | `scripts/run_backtest_with_level2.py` — L2 dry run comparative backtest | ✅ done |
+| `scripts/dry_run_final_proyecciones.py` — simulated projections of 4 proposed improvements | ✅ done |
 
 ---
 
