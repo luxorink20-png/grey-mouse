@@ -38,6 +38,8 @@ from gibbz_failed_auction      import FADetector
 from gibbz_gap_fill            import GapFillDetector
 from gibbz_poc_magnet          import POCMagnetDetector
 from gibbz_setup_router        import SetupRouter
+from setup_pullback            import PullbackDetector
+from setup_breakout            import BreakoutDetector
 from historical_context_loader import HistoricalContextLoader
 from bar_aggregator            import BarAggregator
 
@@ -154,14 +156,16 @@ def run_session(session_date: str, recording_file: str,
     outcome    = OutcomeEngine(session_date=session_date)
     logger_v3  = GIBBZLoggerV3()
 
-    or_timer    = ORTimer()
-    vwap_engine = VWAPEngine()
-    bounce_det  = BounceDetector()
-    va80_det    = VA80Detector(vah=VAH, val=VAL, open_price=ctx.open_price)
-    fa_det      = FADetector(vah=VAH, val=VAL)
-    gap_fill    = GapFillDetector(open_price=ctx.open_price, prev_close=ctx.prev_close)
-    poc_magnet  = POCMagnetDetector(poc=POC)
-    setup_router = SetupRouter()
+    or_timer      = ORTimer()
+    vwap_engine   = VWAPEngine()
+    bounce_det    = BounceDetector()
+    va80_det      = VA80Detector(vah=VAH, val=VAL, open_price=ctx.open_price)
+    fa_det        = FADetector(vah=VAH, val=VAL)
+    gap_fill      = GapFillDetector(open_price=ctx.open_price, prev_close=ctx.prev_close)
+    poc_magnet    = POCMagnetDetector(poc=POC)
+    pullback_det  = PullbackDetector()
+    breakout_det  = BreakoutDetector()
+    setup_router  = SetupRouter()
 
     bars: list[BarData] = []
     bar_count = 0
@@ -251,11 +255,13 @@ def run_session(session_date: str, recording_file: str,
             if vwap_r.vwap > 0:
                 levels.set_vwap(vwap_r.vwap)
 
-            bounce_r = bounce_det.update(context, result, etil_r)
-            va80_r   = va80_det.update(raw["price"])
-            fa_r     = fa_det.update(raw["price"], raw.get("delta", 0))
-            gap_r    = gap_fill.update(raw["price"])
-            poc_r    = poc_magnet.update(raw["price"])
+            bounce_r   = bounce_det.update(context, result, etil_r)
+            va80_r     = va80_det.update(raw["price"])
+            fa_r       = fa_det.update(raw["price"], raw.get("delta", 0))
+            gap_r      = gap_fill.update(raw["price"])
+            poc_r      = poc_magnet.update(raw["price"])
+            pullback_r = pullback_det.update(raw)
+            breakout_r = breakout_det.update(raw)
 
             setup_r  = setup_router.route(
                 bar_count=bar_count,
@@ -265,6 +271,7 @@ def run_session(session_date: str, recording_file: str,
                 or_r=or_r, ibh_setup=ibh_setup,
                 fa_r=fa_r, va80_r=va80_r, vwap_r=vwap_r,
                 gap_r=gap_r, poc_r=poc_r, bounce_r=bounce_r,
+                pullback_r=pullback_r, breakout_r=breakout_r,
             )
 
             logger_v3.log(bar_count, raw, env_r, conf_r, cont_r,
@@ -379,7 +386,8 @@ def report_all(all_trades: list[Trade], sessions_run: int):
     print(f"           avg_win={aw:+.2f}  avg_loss={al:+.2f}\n")
 
     priority = ["ORB_SETUP", "FA_SETUP", "VA80_SETUP", "VWAP_SETUP",
-                "GAP_SETUP", "POC_SETUP", "BOUNCE_SETUP"]
+                "GAP_SETUP", "POC_SETUP", "BOUNCE_SETUP",
+                "PULLBACK_SETUP", "BREAKOUT_SETUP"]
 
     by_type: dict[str, list[Trade]] = defaultdict(list)
     for t in all_trades:

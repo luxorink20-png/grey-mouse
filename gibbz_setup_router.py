@@ -29,6 +29,10 @@ from dataclasses import dataclass
 _TREND_ENVS    = {"EFFICIENT_TREND", "LIQUIDATION"}
 _DISLOC_THRESH = 150.0  # pts — extreme opening dislocation from VA boundary
 
+# improvement-1+2: new setups integrated at priority 4 (PULLBACK) and 5 (BREAKOUT)
+from setup_pullback  import PullbackResult
+from setup_breakout  import BreakoutResult
+
 
 @dataclass
 class SetupResult:
@@ -70,7 +74,10 @@ class SetupRouter:
               vwap_r,
               gap_r,
               poc_r,
-              bounce_r) -> SetupResult:
+              bounce_r,
+              # improvement-1+2 new setups (optional for backward compatibility)
+              pullback_r: PullbackResult | None = None,
+              breakout_r: BreakoutResult | None = None) -> SetupResult:
 
         va_range = max(vah - val, 1.0)
 
@@ -133,5 +140,37 @@ class SetupRouter:
                                    8.0, round(va_range, 2),
                                    f"FailedAuction {direction}")
 
-        # ── 4. NO_SETUP ───────────────────────────────────────────────
+        # ── 4. PULLBACK_SETUP (improvement-1+2) ──────────────────────
+        if pullback_r is not None:
+            pb_sig = pullback_r.signal
+            if pb_sig == "PULLBACK_LONG" and not blocked("LONG"):
+                return SetupResult(
+                    "PULLBACK_SETUP", "LONG", 65,
+                    pullback_r.stop_pts, pullback_r.target_pts,
+                    f"Pullback {pullback_r.state}",
+                )
+            if pb_sig == "PULLBACK_SHORT" and not blocked("SHORT"):
+                return SetupResult(
+                    "PULLBACK_SETUP", "SHORT", 65,
+                    pullback_r.stop_pts, pullback_r.target_pts,
+                    f"Pullback {pullback_r.state}",
+                )
+
+        # ── 5. BREAKOUT_SETUP (improvement-1+2) ──────────────────────
+        if breakout_r is not None:
+            bo_sig = breakout_r.signal
+            if bo_sig == "BREAKOUT_LONG" and not blocked("LONG"):
+                return SetupResult(
+                    "BREAKOUT_SETUP", "LONG", 60,
+                    breakout_r.stop_pts, breakout_r.target_pts,
+                    f"Breakout rng={breakout_r.consolidation_range:.1f} vol={breakout_r.volume_ratio:.1f}x",
+                )
+            if bo_sig == "BREAKOUT_SHORT" and not blocked("SHORT"):
+                return SetupResult(
+                    "BREAKOUT_SETUP", "SHORT", 60,
+                    breakout_r.stop_pts, breakout_r.target_pts,
+                    f"Breakout rng={breakout_r.consolidation_range:.1f} vol={breakout_r.volume_ratio:.1f}x",
+                )
+
+        # ── 6. NO_SETUP ───────────────────────────────────────────────
         return SetupResult("NO_SETUP", "NEUTRAL", 0, 0.0, 0.0, "")
