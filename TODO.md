@@ -142,3 +142,22 @@ All 19 P0–P3 findings from `QA_AUDIT_REPORT.md` are resolved as of 2026-05-30.
 - Edge de GIBBZ es concentrado y selectivo — agregar setups lo diluye
 - MaxDD se amplifica cuando nuevos trades coinciden con sesiones de drawdown existente
 - Proyecciones sin backtest real tienen error de hasta 89% (MaxDD) y 100% (trade count)
+
+---
+
+## Estimación de Error de Datos (2026-05-31)
+
+- [x] **[DE1]** Confirmar métricas actuales con backtest real (43 sesiones): PF=2.91, MaxDD=12 pts, 32 trades ✅
+- [x] **[DE2]** Crear `reports/correction_factors.md` con factores precisos de corrección 5s/1000x → tick/normal ✅
+- [x] **[DE3]** Crear y ejecutar `scripts/estimate_tick_normal_metrics.py` — estimación de métricas con datos reales ✅
+  - PF estimado: 3.35 (+15%), MaxDD: 9.60 pts (-20%), Trades: 320 (+900%), Exp: +7.24 (+8%)
+- [x] **[DE4]** Ejecutar Bootstrap Treadmill 200 runs: PF_median=2.90, PF_p5%=1.56, MaxDD_p95%=36 pts ✅
+- [x] **[DE5]** Ejecutar Counterfactual Edge Audit 9-fase: Score=99/100, edge real confirmado ✅
+- [x] **[DE6]** Simular mejoras 1+2 con datos tick/normal — siguen fallando (MaxDD>20 para imp-1+2) ✅
+- [x] **[DE7]** Crear `reports/Dry_Run_Estimation_Error_Final_Report.md` con informe ejecutivo completo ✅
+
+### Conclusión clave (2026-05-31):
+- Datos actuales subestiman el edge real: PF real estimado 3.35 vs 2.91 observado
+- Sistema es production-ready con datos actuales (4/5 criterios) y con tick/normal (5/5)
+- Las mejoras 1+2 SIGUEN fallando con datos reales — veredicto DISCARD es robusto
+- **Acción más valiosa: REGRABAR sesiones en tick/tick, velocidad normal (costo=0)**

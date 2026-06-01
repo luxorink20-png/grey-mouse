@@ -333,6 +333,14 @@ Full report: `QA_AUDIT_REPORT.md`
 | **Dry Run Real (2026-05-31)** — branches `improvement-1` and `improvement-1-plus-2` created and backtested | ✅ done |
 | `reports/Dry_Run_Final_Informe.md` — full executive report with real backtest results | ✅ done |
 | **Verdict: DISCARD** — improvement-1 has no effect; improvement-1+2 PF=2.47 < 2.5 threshold, MaxDD=34 pts > 20 limit | ✅ done |
+| **Data Error Estimation (2026-05-31)** — quantified 5s/1000x vs tick/normal gap | ✅ done |
+| `scripts/estimate_tick_normal_metrics.py` — simulation of estimated metrics with real tick data | ✅ done |
+| `reports/correction_factors.md` — precise correction factors for 5s/1000x → tick/normal | ✅ done |
+| `reports/estimated_metrics_tick_normal.md` — actual vs estimated comparison table | ✅ done |
+| `reports/bootstrap_treadmill_confirmation.md` — 200-run bootstrap on current system | ✅ done |
+| `reports/counterfactual_edge_audit.md` — 9-phase counterfactual audit summary (Score=99/100) | ✅ done |
+| `reports/improvement_1_2_simulation_tick_normal.md` — improvements still fail with real data | ✅ done |
+| `reports/Dry_Run_Estimation_Error_Final_Report.md` — comprehensive final report | ✅ done |
 
 ---
 
