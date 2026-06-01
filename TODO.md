@@ -161,3 +161,19 @@ All 19 P0–P3 findings from `QA_AUDIT_REPORT.md` are resolved as of 2026-05-30.
 - Sistema es production-ready con datos actuales (4/5 criterios) y con tick/normal (5/5)
 - Las mejoras 1+2 SIGUEN fallando con datos reales — veredicto DISCARD es robusto
 - **Acción más valiosa: REGRABAR sesiones en tick/tick, velocidad normal (costo=0)**
+
+---
+
+## Paper Trading Live Checklist (2026-06-01)
+
+- [x] **[PT1]** Crear `scripts/paper_trading_live_checklist.py` — checklist 15 criterios Paper→Live ✅
+  - 6 criterios básicos: PF≥2.5, PnL>0, ≥10 trades/sem, MaxDD<10 pts, WR≥45%, Exp>0
+  - 3 criterios avanzados dirección: LONG PF≥2.0, SHORT PF≥4.0, SHORT PF > LONG PF
+  - 2 criterios slippage: N/A (requiere columna 'slippage_ticks' en feedback_engine.py)
+  - 1 criterio rachas: max pérdidas consecutivas ≤3
+  - 3 criterios zona: VA80 PF≥2.5, FA PF≥2.0, VA80 PF > FA PF
+  - Salida: OK/FAIL/WARN/N/A por criterio + veredicto GO/NO-GO + guardado a reports/paper_trading/
+
+- [ ] **[PT2]** Activar slippage tracking: agregar columna 'slippage_ticks' a `feedback_engine.py`
+  - Fórmula: `(entry_real - entry_signal) / tick_size` para LONGs, inverso para SHORTs
+  - Sin esto, criterios 10 y 11 permanecen N/A

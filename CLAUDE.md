@@ -341,6 +341,7 @@ Full report: `QA_AUDIT_REPORT.md`
 | `reports/counterfactual_edge_audit.md` — 9-phase counterfactual audit summary (Score=99/100) | ✅ done |
 | `reports/improvement_1_2_simulation_tick_normal.md` — improvements still fail with real data | ✅ done |
 | `reports/Dry_Run_Estimation_Error_Final_Report.md` — comprehensive final report | ✅ done |
+| `scripts/paper_trading_live_checklist.py` — 15-criteria Paper→Live checklist (6 basic + 9 advanced) | ✅ done 2026-06-01 |
 
 ---
 
