@@ -175,6 +175,15 @@ All 19 P0–P3 findings from `QA_AUDIT_REPORT.md` are resolved as of 2026-05-30.
   - Salida: OK/FAIL/WARN/N/A por criterio + veredicto GO/NO-GO + guardado a reports/paper_trading/
 
 - [x] **[PT2]** Activar slippage tracking en `feedback_engine.py` ✅ 2026-06-01
+- [x] **[PT3]** Automatizar contexto pre-sesion (PDH/PDL/ONH/ONL/VAH/VAL) ✅ 2026-06-01
+  - `context_fetcher.py`: load/validate/auto-refresh; PDH/PDL via yfinance si levels.json stale
+  - `GibbzBridge.cs`: TrackContextLevels() escribe `~/gibbz_context_levels.json` con datos Rithmic
+  - `scripts/update_context.py`: helper interactivo para actualizar levels.json
+  - `scripts/start_paper_trading.py`: pre-flight + context load + engine launcher
+  - `docs/PREREQUISITOS_PRE_SESION.md`: checklist completo de pre-sesion
+  - `requirements.txt`: yfinance==1.4.1 agregado
+  - `levels.json`: campo `_date` agregado para freshness tracking
+  - **Nota**: VAH/VAL/POC siguen siendo manuales (volume profile requiere ATAS)
   - `TradeRecord` nuevos campos: `signal_price` (precio al momento del signal) y `slippage_ticks`
   - `open_trade()` acepta `signal_price=` kwarg; engine.py y run_replay.py pasan `raw["price"]`
   - Slippage calculado en `update()` en el primer tick: `abs(entry - signal) / tick`

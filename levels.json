@@ -1,4 +1,5 @@
 {
+  "_date": "2026-06-01",
   "volume_profile": {
     "VAH": 7175.0,
     "POC": 7160.0,
@@ -12,8 +13,8 @@
     "hpz": 7162.0
   },
   "session": {
-    "prev_high": 7190.0,
-    "prev_low": 7130.0,
+    "prev_high": 7611.75,
+    "prev_low": 7572.75,
     "prev_close": 7160.0,
     "open_price": 7155.0,
     "onh": 7200.0,

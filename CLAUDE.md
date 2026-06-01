@@ -343,6 +343,11 @@ Full report: `QA_AUDIT_REPORT.md`
 | `reports/Dry_Run_Estimation_Error_Final_Report.md` — comprehensive final report | ✅ done |
 | `scripts/paper_trading_live_checklist.py` — 15-criteria Paper→Live checklist (6 basic + 9 advanced) | ✅ done 2026-06-01 |
 | `feedback_engine.py` — `slippage_ticks` field + `signal_price` param; written to CSV per trade | ✅ done 2026-06-01 |
+| `context_fetcher.py` — context loading/validation; auto-fetch PDH/PDL (yfinance); Rithmic via bridge file | ✅ done 2026-06-01 |
+| `GibbzBridge.cs` — level tracking from bar stream; writes `gibbz_context_levels.json` (Rithmic data) | ✅ done 2026-06-01 |
+| `scripts/update_context.py` — guided pre-session context update helper | ✅ done 2026-06-01 |
+| `scripts/start_paper_trading.py` — pre-flight check + context load + engine launcher | ✅ done 2026-06-01 |
+| `docs/PREREQUISITOS_PRE_SESION.md` — complete pre-session checklist with automation levels | ✅ done 2026-06-01 |
 
 ---
 
