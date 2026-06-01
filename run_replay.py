@@ -215,6 +215,7 @@ def run_session(session_date: str, recording_path: str) -> dict:
                 feedback.open_trade(
                     risk_result=risk_result, analysis=analysis,
                     narrative=narrative, session_name=session_name,
+                    signal_price=raw["price"],
                 )
 
             closed = feedback.update(raw["price"])

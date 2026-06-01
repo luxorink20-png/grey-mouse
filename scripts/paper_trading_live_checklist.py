@@ -72,14 +72,20 @@ def _read_date(d: date) -> list[dict]:
                 result = row.get("result", "")
                 if result not in ("WIN", "LOSS", "BREAKEVEN", "TIMEOUT"):
                     continue
+                raw_slip = row.get("slippage_ticks", "")
+                try:
+                    slip = float(raw_slip) if raw_slip.strip() != "" else None
+                except (ValueError, TypeError):
+                    slip = None
                 try:
                     rows.append({
-                        "date":      str(d),
-                        "direction": row.get("direction", "").strip().upper(),
-                        "result":    result,
-                        "pnl_pts":   float(row.get("pnl_pts", "0") or "0"),
-                        "zone":      row.get("zone", "").strip().upper(),
-                        "rr":        float(row.get("rr", "0") or "0"),
+                        "date":           str(d),
+                        "direction":      row.get("direction", "").strip().upper(),
+                        "result":         result,
+                        "pnl_pts":        float(row.get("pnl_pts", "0") or "0"),
+                        "zone":           row.get("zone", "").strip().upper(),
+                        "rr":             float(row.get("rr", "0") or "0"),
+                        "slippage_ticks": slip,
                     })
                 except (ValueError, TypeError):
                     pass
@@ -166,6 +172,12 @@ def compute_metrics(trades: list[dict]) -> dict:
     va80 = [t for t in trades if t["zone"] in VA80_ZONES]
     fa   = [t for t in trades if t["zone"] in FA_ZONES]
 
+    # Slippage (only trades that have the column populated)
+    slip_vals = [t["slippage_ticks"] for t in trades
+                 if t.get("slippage_ticks") is not None]
+    slip_avg = round(sum(slip_vals) / len(slip_vals), 2) if slip_vals else None
+    slip_max = round(max(slip_vals), 2) if slip_vals else None
+
     return {
         "n": n, "wins": nw, "losses": nl,
         "wr":      round(wr, 1),
@@ -184,6 +196,10 @@ def compute_metrics(trades: list[dict]) -> dict:
         "n_fa":    len(fa),
         "va80_pf": _pf(va80),
         "fa_pf":   _pf(fa),
+        # Slippage
+        "slip_n":   len(slip_vals),
+        "slip_avg": slip_avg,
+        "slip_max": slip_max,
     }
 
 
@@ -306,23 +322,41 @@ def build_checklist(m: dict, weeks_elapsed: float) -> list[dict]:
             "Insuf. trades en una o ambas direcciones",
         ))
 
-    # ── AVANZADOS — SLIPPAGE (N/A — no columna en CSV) ───────────────────────
+    # ── AVANZADOS — SLIPPAGE ──────────────────────────────────────────────────
+
+    slip_n   = m.get("slip_n",   0)
+    slip_avg = m.get("slip_avg", None)
+    slip_max = m.get("slip_max", None)
 
     # 10. Slippage promedio <= 1 tick/leg
-    items.append(_item(
-        NA,
-        "Slippage promedio <= 1 tick/leg",
-        "N/A", f"<= {T['slip_avg_max']} ticks",
-        "Requiere columna 'slippage_ticks' en gibbz_trades CSV",
-    ))
+    if slip_n >= 1 and slip_avg is not None:
+        items.append(_item(
+            OK if slip_avg <= T["slip_avg_max"] else FAIL,
+            f"Slippage promedio <= 1 tick/leg  (n={slip_n})",
+            f"{slip_avg:.2f} ticks", f"<= {T['slip_avg_max']} ticks",
+        ))
+    else:
+        items.append(_item(
+            NA,
+            "Slippage promedio <= 1 tick/leg",
+            "N/A", f"<= {T['slip_avg_max']} ticks",
+            "Sin datos: columna 'slippage_ticks' ausente en CSV historico",
+        ))
 
     # 11. Slippage maximo < 2 ticks/leg
-    items.append(_item(
-        NA,
-        "Slippage maximo < 2 ticks/leg",
-        "N/A", f"< {T['slip_max_max']} ticks",
-        "Requiere columna 'slippage_ticks' en gibbz_trades CSV",
-    ))
+    if slip_n >= 1 and slip_max is not None:
+        items.append(_item(
+            OK if slip_max < T["slip_max_max"] else FAIL,
+            f"Slippage maximo < 2 ticks/leg  (n={slip_n})",
+            f"{slip_max:.2f} ticks", f"< {T['slip_max_max']} ticks",
+        ))
+    else:
+        items.append(_item(
+            NA,
+            "Slippage maximo < 2 ticks/leg",
+            "N/A", f"< {T['slip_max_max']} ticks",
+            "Sin datos: columna 'slippage_ticks' ausente en CSV historico",
+        ))
 
     # ── AVANZADOS — RACHAS ────────────────────────────────────────────────────
 
@@ -478,9 +512,9 @@ def print_checklist(start: date, end: date, trades: list[dict]) -> None:
 
     if n_na > 0:
         print()
-        print(f"  NOTA N/A: {n_na} criterio(s) de slippage no evaluables.")
-        print("  Para activarlos: agregar columna 'slippage_ticks' en feedback_engine.py")
-        print("  (diferencia entry_price_real vs entry_price_intendido en ticks).")
+        print(f"  NOTA N/A: {n_na} criterio(s) sin datos de slippage.")
+        print("  Los CSV historicos no tienen la columna 'slippage_ticks'.")
+        print("  Los trades nuevos (desde esta sesion) ya la incluiran automaticamente.")
 
     print()
 

@@ -342,6 +342,7 @@ Full report: `QA_AUDIT_REPORT.md`
 | `reports/improvement_1_2_simulation_tick_normal.md` — improvements still fail with real data | ✅ done |
 | `reports/Dry_Run_Estimation_Error_Final_Report.md` — comprehensive final report | ✅ done |
 | `scripts/paper_trading_live_checklist.py` — 15-criteria Paper→Live checklist (6 basic + 9 advanced) | ✅ done 2026-06-01 |
+| `feedback_engine.py` — `slippage_ticks` field + `signal_price` param; written to CSV per trade | ✅ done 2026-06-01 |
 
 ---
 

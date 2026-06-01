@@ -174,6 +174,9 @@ All 19 P0–P3 findings from `QA_AUDIT_REPORT.md` are resolved as of 2026-05-30.
   - 3 criterios zona: VA80 PF≥2.5, FA PF≥2.0, VA80 PF > FA PF
   - Salida: OK/FAIL/WARN/N/A por criterio + veredicto GO/NO-GO + guardado a reports/paper_trading/
 
-- [ ] **[PT2]** Activar slippage tracking: agregar columna 'slippage_ticks' a `feedback_engine.py`
-  - Fórmula: `(entry_real - entry_signal) / tick_size` para LONGs, inverso para SHORTs
-  - Sin esto, criterios 10 y 11 permanecen N/A
+- [x] **[PT2]** Activar slippage tracking en `feedback_engine.py` ✅ 2026-06-01
+  - `TradeRecord` nuevos campos: `signal_price` (precio al momento del signal) y `slippage_ticks`
+  - `open_trade()` acepta `signal_price=` kwarg; engine.py y run_replay.py pasan `raw["price"]`
+  - Slippage calculado en `update()` en el primer tick: `abs(entry - signal) / tick`
+  - CSV ahora incluye columna `slippage_ticks` (0.0 en paper trading = ejecucion perfecta asumida)
+  - CSVs historicos sin la columna: checklist muestra N/A (backward compatible)

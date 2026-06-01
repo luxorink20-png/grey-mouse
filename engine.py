@@ -280,6 +280,7 @@ def run_engine():
                         analysis     = analysis,
                         narrative    = narrative,
                         session_name = session_name,
+                        signal_price = raw["price"],
                     )
 
             closed_trade = feedback.update(raw["price"])

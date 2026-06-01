@@ -55,6 +55,9 @@ class TradeRecord:
     intent_conviction: int = 0
     session:          str  = ""
 
+    # Signal price (bar price when trade was approved)
+    signal_price:   float = 0.0
+
     # Outcome
     result:         str   = "PENDING"  # PENDING/WIN/LOSS/BREAKEVEN/TIMEOUT
     exit_price:     float = 0.0
@@ -65,6 +68,7 @@ class TradeRecord:
     was_trap:       bool  = False
     bars_held:      int   = 0
     follow_through: bool  = False   # reached T1 before stop
+    slippage_ticks: float = 0.0     # abs(entry_price - signal_price) / tick
 
 
 @dataclass
@@ -152,10 +156,12 @@ class FeedbackEngine:
                    risk_result,
                    analysis,
                    narrative,
-                   session_name: str = "") -> None:
+                   session_name:  str   = "",
+                   signal_price:  float = 0.0) -> None:
         """
         Register a new approved setup for tracking.
         Only one pending trade at a time — new one replaces old.
+        signal_price: bar price when the signal fired (for slippage calc).
         """
         if not risk_result.approved:
             return
@@ -172,6 +178,7 @@ class FeedbackEngine:
             trade_id          = self._counter,
             open_time         = datetime.now().strftime("%H:%M:%S"),
             entry_price       = 0.0,  # set on first update
+            signal_price      = signal_price,
             direction         = risk_result.direction,
             position_size     = risk_result.position_size,
             stop              = risk_result.stop,
@@ -201,9 +208,13 @@ class FeedbackEngine:
 
         tr = self._pending
 
-        # Set entry price on first update
+        # Set entry price on first update; compute slippage vs signal price
         if tr.entry_price == 0.0:
             tr.entry_price = price
+            if tr.signal_price > 0.0:
+                tr.slippage_ticks = round(
+                    abs(price - tr.signal_price) / self._tick, 2
+                )
             return None
 
         tr.bars_held += 1
@@ -389,6 +400,7 @@ class FeedbackEngine:
                 "was_trap", "follow_through",
                 "confluence_score", "zone", "event",
                 "narrative", "conviction", "rr", "session",
+                "slippage_ticks",
             ]
             with open(self._filepath, "w", newline="", encoding="utf-8") as f:
                 csv.writer(f).writerow(headers)
@@ -410,6 +422,7 @@ class FeedbackEngine:
             tr.confluence_score, tr.zone, tr.event,
             tr.narrative, tr.intent_conviction,
             tr.risk_reward, tr.session,
+            tr.slippage_ticks,
         ]
         try:
             with open(self._filepath, "a", newline="", encoding="utf-8") as f:
