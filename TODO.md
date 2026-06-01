@@ -119,3 +119,26 @@ All 19 P0–P3 findings from `QA_AUDIT_REPORT.md` are resolved as of 2026-05-30.
   - Phase 7: Edge Decay Ranking by PF per session
   - Phase 8: Failure Signatures (momentum, overtrading, direction dominance)
   - Phase 9: GIBBZ EDGE FAILURE REPORT
+
+---
+
+## Dry Run Real — Mejoras 1+2 (2026-05-31)
+
+- [x] **[DR1]** Branch `improvement-1`: relax ContextFilter thresholds (ATR 1.5→2.0, vol 2.0→2.5, remove activity check, disable destructive_regime)
+  - Resultado: IDENTICO al baseline (32 trades, PF=2.91) — cambios a nivel barra no afectan backtest
+  - Hallazgo: `is_session_filtered()` (nivel sesion) domina; `should_skip()` (nivel barra) no se llama en backtest
+  
+- [x] **[DR2]** Branch `improvement-1-plus-2`: agregar `PullbackDetector` + `BreakoutDetector`
+  - Intento 1 (thresholds iniciales): 141 trades, PF=1.63 — FAIL (demasiados trades de baja calidad)
+  - Intento 2 (thresholds endurecidos): 35 trades, PF=2.47, MaxDD=34 pts — FAIL (PF<2.5, MaxDD>20)
+  - Bootstrap (100 runs): PF_p5%=1.16 (necesita >=2.0), MaxDD_p95%=78 pts (necesita <=30) — FAIL
+  
+- [x] **[DR3]** Crear `reports/Dry_Run_Final_Informe.md` con informe ejecutivo completo
+
+- **VEREDICTO: DISCARD** — No mergear ninguna mejora. Mantener sistema actual (PF=2.91) y proceder a paper trading.
+
+### Lecciones documentadas (ver `reports/Dry_Run_Final_Informe.md`):
+- Bar-level vs session-level filter distinction (Invariante 8 en CLAUDE.md)
+- Edge de GIBBZ es concentrado y selectivo — agregar setups lo diluye
+- MaxDD se amplifica cuando nuevos trades coinciden con sesiones de drawdown existente
+- Proyecciones sin backtest real tienen error de hasta 89% (MaxDD) y 100% (trade count)

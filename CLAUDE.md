@@ -330,6 +330,9 @@ Full report: `QA_AUDIT_REPORT.md`
 | `scripts/level2_features_bar.py` — Level 2 proxy feature detection from 500-tick bars | ✅ done |
 | `scripts/run_backtest_with_level2.py` — L2 dry run comparative backtest | ✅ done |
 | `scripts/dry_run_final_proyecciones.py` — simulated projections of 4 proposed improvements | ✅ done |
+| **Dry Run Real (2026-05-31)** — branches `improvement-1` and `improvement-1-plus-2` created and backtested | ✅ done |
+| `reports/Dry_Run_Final_Informe.md` — full executive report with real backtest results | ✅ done |
+| **Verdict: DISCARD** — improvement-1 has no effect; improvement-1+2 PF=2.47 < 2.5 threshold, MaxDD=34 pts > 20 limit | ✅ done |
 
 ---
 
@@ -342,6 +345,7 @@ Full report: `QA_AUDIT_REPORT.md`
 5. `VoiceEngine.say()` is non-blocking — never call `say_blocking()` from the main engine loop.
 6. Engine pipeline order in `engine.py` is load-bearing: `event → levels → confluence → validator → intent → risk`. Do not reorder without running the full test suite.
 7. `config.py` is the single source of truth for feature flags and connection config — do not re-declare these constants in other modules.
+8. `ContextFilter` has two independent layers: `is_session_filtered()` (backtest + live) filters entire sessions by type; `should_skip()` (live engine only) filters individual bars by ATR/volume. Only layer 1 affects backtest results. Changing bar-level thresholds has zero effect on backtest trade count.
 
 ---
 
