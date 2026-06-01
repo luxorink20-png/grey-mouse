@@ -1,0 +1,9 @@
+component,label,weight_pct,score,weighted
+A_bootstrap,Bootstrap Edge Real,20.0,85.3,17.06
+B_walkforward,Walk-Forward Consistency,20.0,61.9,12.38
+C_oos,Out-of-Sample (43 sess),15.0,100,15.0
+D_degradation,Monte Carlo Degradación,15.0,30,4.5
+E_slippage,Slippage Stress Test,15.0,20,3.0
+F_concentration,Edge Concentration,10.0,95.0,9.5
+G_regime,Regime Analysis,5.0,100.0,5.0
+TOTAL,Total,100,66,66.44
