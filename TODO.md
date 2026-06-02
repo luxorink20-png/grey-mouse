@@ -49,6 +49,16 @@ Track progress here. Mark items `[x]` as completed.
 
 ---
 
+## New Findings (2026-06-02)
+
+- [x] **[IF-DRY-RUN]** Institutional Fusion dry-run validation complete — 5 simulation modules
+  created in `simulation/institutional_fusion/`, comparative backtest run, statistical
+  validation complete (bootstrap 98% positive, p=0.16 underpowered at 84-106 trades),
+  VERDICT: CONDITIONAL — approved for paper trading validation.  See
+  `simulation/institutional_fusion/results/INSTITUTIONAL_FUSION_READINESS_REPORT.md`.
+
+---
+
 ## Progress
 
 | ID | Status | Notes |

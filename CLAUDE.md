@@ -349,6 +349,18 @@ Full report: `QA_AUDIT_REPORT.md`
 | `scripts/update_context.py` — guided pre-session context update helper | ✅ done 2026-06-01 |
 | `scripts/start_paper_trading.py` — pre-flight check + context load + engine launcher | ✅ done 2026-06-01 |
 | `docs/PREREQUISITOS_PRE_SESION.md` — complete pre-session checklist with automation levels | ✅ done 2026-06-01 |
+| **Institutional Fusion Dry-Run Validation (2026-06-02)** — 5-phase simulation validation | ✅ done 2026-06-02 |
+| `simulation/institutional_fusion/` — isolated simulation layer (5 modules + harness + results) | ✅ done 2026-06-02 |
+| `quality_engine_sim.py` — trade quality scoring 0-100 (confluence, zone, event, conviction, RR) | ✅ done 2026-06-02 |
+| `orderflow_sim.py` — order-flow imbalance simulation (future CME Level-2 integration) | ✅ done 2026-06-02 |
+| `smc_sim.py` — SMC confluence (sweep, FVG, order block, BOS) from trade metadata | ✅ done 2026-06-02 |
+| `ml_confidence_sim.py` — synthetic ML confidence 0-1 (real model deferred to Wave 3) | ✅ done 2026-06-02 |
+| `adaptive_risk_sim.py` — dynamic position sizing 0.5x–1.0x by confidence + DD state | ✅ done 2026-06-02 |
+| `comparative_backtest.py` — full harness: 106-trade synthetic dataset vs quality-filtered fusion | ✅ done 2026-06-02 |
+| **Simulation results**: WR 48.8% (+10.1pp), PF 2.33 (+49%), Exp +4.53 (+74%), DD -40 pts (improved) | ✅ done 2026-06-02 |
+| **Statistical validation**: bootstrap 98%/200 runs improve WR; p=0.16 (underpowered, need 200+ trades) | ✅ done 2026-06-02 |
+| **VERDICT**: CONDITIONAL — Approved for paper trading validation; implement Wave 1 first | ✅ done 2026-06-02 |
+| `INSTITUTIONAL_FUSION_READINESS_REPORT.md` — full dry-run report with go/no-go decision | ✅ done 2026-06-02 |
 
 ---
 

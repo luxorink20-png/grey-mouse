@@ -1,0 +1,60 @@
+{
+  "timestamp": "2026-06-02T17:01:45.448815",
+  "data_source": "synthetic seeded from real historical baseline (106 trades, WR=38.7%, avg_win=18.76, avg_loss=-7.57)",
+  "quality_threshold": 62,
+  "baseline": {
+    "win_rate": 0.387,
+    "profit_factor": 1.56,
+    "expectancy": 2.61,
+    "max_drawdown": -95.75,
+    "total_trades": 106,
+    "winning_trades": 41,
+    "losing_trades": 65,
+    "avg_win": 18.76,
+    "avg_loss": -7.57,
+    "total_pnl": 277.0,
+    "wl_ratio": 2.48,
+    "setups": {
+      "FA_SETUP": {
+        "trades": 89,
+        "win_rate": 0.371,
+        "expectancy": 1.92,
+        "pnl": 171
+      },
+      "VA80_SETUP": {
+        "trades": 17,
+        "win_rate": 0.471,
+        "expectancy": 6.24,
+        "pnl": 106
+      }
+    }
+  },
+  "baseline_run": {
+    "total_trades": 106,
+    "winning_trades": 46,
+    "losing_trades": 60,
+    "win_rate": 0.4339622641509434,
+    "gross_profit": 892.02,
+    "gross_loss": 470.11,
+    "profit_factor": 1.897,
+    "total_pnl": 421.91,
+    "expectancy": 3.98,
+    "avg_win": 19.39,
+    "avg_loss": -7.84,
+    "max_drawdown": -61.53
+  },
+  "fusion": {
+    "total_trades": 84,
+    "winning_trades": 41,
+    "losing_trades": 43,
+    "win_rate": 0.4880952380952381,
+    "gross_profit": 667.92,
+    "gross_loss": 287.21,
+    "profit_factor": 2.326,
+    "total_pnl": 380.71,
+    "expectancy": 4.532,
+    "avg_win": 16.29,
+    "avg_loss": -6.68,
+    "max_drawdown": -39.98
+  }
+}

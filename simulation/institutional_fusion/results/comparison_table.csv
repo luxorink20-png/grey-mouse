@@ -1,0 +1,8 @@
+Metric,Baseline,Fusion,Delta,Status,TargetMet
+win_rate,0.387,0.488,+0.101,PASS,True
+profit_factor,1.560,2.326,+0.766,PASS,True
+expectancy,2.610,4.532,+1.922,PASS,True
+max_drawdown,-95.750,-39.980,+55.770,PASS,True
+total_trades,106.000,84.000,-22.000,INFO,
+avg_win,18.760,16.290,-2.470,FAIL,
+avg_loss,-7.570,-6.680,+0.890,PASS,

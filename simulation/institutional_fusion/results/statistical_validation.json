@@ -1,0 +1,27 @@
+{
+  "method": "200-run bootstrap simulation + two-proportion z-test",
+  "baseline_wr": 0.387,
+  "fusion_wr_mean": 0.4971391191403443,
+  "fusion_wr_std": 0.05612546780086846,
+  "fusion_wr_ci95": [
+    0.3907567049808429,
+    0.6026685393258427
+  ],
+  "pct_runs_above_baseline_wr": 0.98,
+  "fusion_pf_mean": 2.5304238690132705,
+  "fusion_pf_ci95": [
+    1.5347783778114767,
+    3.7336313680785223
+  ],
+  "pct_runs_above_baseline_pf": 0.965,
+  "fusion_exp_mean": 4.921841937350293,
+  "z_stat": 1.4001415973497808,
+  "p_value": 0.16147092064556934,
+  "significant": false,
+  "real_world": {
+    "contexto_fuerte_wr_improvement": 0.045,
+    "contexto_fuerte_pf_improvement": 0.32,
+    "va80_vs_fa_wr_diff": 0.1
+  },
+  "verdict": "INCONCLUSIVE"
+}
