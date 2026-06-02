@@ -162,7 +162,7 @@ def run_session(session_date: str, recording_file: str,
     logger_v3  = GIBBZLoggerV3()
 
     or_timer    = ORTimer()
-    vwap_engine = VWAPEngine(rth_required=False)  # backtest bars lack timestamp
+    vwap_engine = VWAPEngine()
     bounce_det  = BounceDetector()
     va80_det    = VA80Detector(vah=VAH, val=VAL, open_price=ctx.open_price)
     fa_det      = FADetector(vah=VAH, val=VAL)

@@ -16,34 +16,28 @@ _RECLAIM_BARS = 2     # min consecutive ABOVE+delta>0 bars to confirm reclaim
 
 @dataclass
 class VWAPResult:
-    vwap:            float   # current VWAP; 0.0 = not yet accumulated
-    state:           str     # AT_VWAP | ABOVE_VWAP | BELOW_VWAP | NO_DATA
-    reclaim:         bool    # active VWAP_RECLAIM event (below→above, delta>0)
-    reclaim_bars:    int     # consecutive bars confirming reclaim
-    rejection:       bool    = False  # active VWAP_REJECTION event (above→below, delta<0)
-    rejection_bars:  int     = 0      # consecutive bars confirming rejection
+    vwap:         float   # current VWAP; 0.0 = not yet accumulated
+    state:        str     # AT_VWAP | ABOVE_VWAP | BELOW_VWAP | NO_DATA
+    reclaim:      bool    # active VWAP_RECLAIM event
+    reclaim_bars: int     # consecutive bars confirming reclaim
 
 
 class VWAPEngine:
 
     def __init__(self, at_band: float = _AT_VWAP_BAND,
-                 reclaim_min_bars: int = _RECLAIM_BARS,
-                 rth_required: bool = True):
-        self._band           = at_band
-        self._min_bars       = reclaim_min_bars
-        self._rth_required   = rth_required
-        self._cum_pv         = 0.0
-        self._cum_vol        = 0.0
-        self._rth_started    = not rth_required  # skip gate when not required
-        self._rth_date       = None
-        self._was_below      = False
-        self._reclaim_bars   = 0
-        self._was_above      = False
-        self._rejection_bars = 0
+                 reclaim_min_bars: int = _RECLAIM_BARS):
+        self._band         = at_band
+        self._min_bars     = reclaim_min_bars
+        self._cum_pv       = 0.0
+        self._cum_vol      = 0.0
+        self._rth_started  = False
+        self._rth_date     = None
+        self._was_below    = False
+        self._reclaim_bars = 0
 
     def update(self, bar: dict) -> VWAPResult:
         ts = bar.get("timestamp", 0)
-        if ts and self._rth_required:
+        if ts:
             self._check_rth(ts)
 
         price  = bar.get("price",  0.0)
@@ -64,17 +58,14 @@ class VWAPEngine:
         else:
             state = "BELOW_VWAP"
 
-        delta     = bar.get("delta", 0)
-        reclaim   = self._update_reclaim(state, delta)
-        rejection = self._update_rejection(state, delta)
+        delta   = bar.get("delta", 0)
+        reclaim = self._update_reclaim(state, delta)
 
         return VWAPResult(
-            vwap           = round(vwap, 2),
-            state          = state,
-            reclaim        = reclaim,
-            reclaim_bars   = self._reclaim_bars,
-            rejection      = rejection,
-            rejection_bars = self._rejection_bars,
+            vwap         = round(vwap, 2),
+            state        = state,
+            reclaim      = reclaim,
+            reclaim_bars = self._reclaim_bars,
         )
 
     # ── internals ────────────────────────────────────────────────────
@@ -107,6 +98,7 @@ class VWAPEngine:
             return False
 
         if state == "AT_VWAP":
+            # Transitional bar — preserve counters, don't advance
             return self._reclaim_bars >= self._min_bars
 
         # state == "ABOVE_VWAP"
@@ -117,22 +109,3 @@ class VWAPEngine:
             self._reclaim_bars = 0
 
         return self._reclaim_bars >= self._min_bars
-
-    def _update_rejection(self, state: str, delta: float) -> bool:
-        """Symmetric rejection: was ABOVE_VWAP, now BELOW_VWAP with negative delta."""
-        if state == "ABOVE_VWAP":
-            self._was_above      = True
-            self._rejection_bars = 0
-            return False
-
-        if state == "AT_VWAP":
-            return self._rejection_bars >= self._min_bars
-
-        # state == "BELOW_VWAP"
-        if delta < 0 and self._was_above:
-            self._rejection_bars += 1
-        else:
-            self._was_above      = False
-            self._rejection_bars = 0
-
-        return self._rejection_bars >= self._min_bars

@@ -200,7 +200,7 @@ tests/
 **Status: 166/166 passing** (2026-06-02)
 
 ```powershell
-pytest                               # all 166
+pytest                               # all 140
 pytest --cov=. --cov-report=term-missing   # with coverage
 pytest tests/unit/                   # unit only
 ```
