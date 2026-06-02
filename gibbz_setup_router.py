@@ -133,5 +133,23 @@ class SetupRouter:
                                    8.0, round(va_range, 2),
                                    f"FailedAuction {direction}")
 
-        # ── 4. NO_SETUP ───────────────────────────────────────────────
+        # ── 4. VWAP_RECLAIM / VWAP_REJECTION ─────────────────────────
+        vwap_val = getattr(vwap_r, "vwap", 0.0)
+        if vwap_val > 0:
+            if getattr(vwap_r, "reclaim", False) and not blocked("LONG"):
+                rb = getattr(vwap_r, "reclaim_bars", 0)
+                return SetupResult(
+                    "VWAP_RECLAIM", "LONG", 65,
+                    6.0, round(va_range * 0.5, 2),
+                    f"VWAP reclaim bars={rb} vwap={vwap_val:.1f}",
+                )
+            if getattr(vwap_r, "rejection", False) and not blocked("SHORT"):
+                jb = getattr(vwap_r, "rejection_bars", 0)
+                return SetupResult(
+                    "VWAP_RECLAIM", "SHORT", 65,
+                    6.0, round(va_range * 0.5, 2),
+                    f"VWAP rejection bars={jb} vwap={vwap_val:.1f}",
+                )
+
+        # ── 5. NO_SETUP ───────────────────────────────────────────────
         return SetupResult("NO_SETUP", "NEUTRAL", 0, 0.0, 0.0, "")
