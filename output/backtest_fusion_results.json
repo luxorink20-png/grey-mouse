@@ -1,0 +1,35 @@
+{
+  "sessions_run": 43,
+  "max_bars": 2000,
+  "quality_threshold": 62,
+  "baseline": {
+    "trades": 98,
+    "win_rate": 41.8,
+    "profit_factor": 1.788,
+    "expectancy": 3.46,
+    "total_pnl": 339.0,
+    "avg_win": 18.76,
+    "avg_loss": -7.54,
+    "max_dd": -76.5
+  },
+  "fusion": {
+    "trades": 101,
+    "win_rate": 35.6,
+    "profit_factor": 1.576,
+    "expectancy": 1.95,
+    "total_pnl": 196.54,
+    "avg_win": 14.94,
+    "avg_loss": -5.25,
+    "max_dd": -56.82
+  },
+  "real_baseline": {
+    "trades": 106,
+    "win_rate": 38.7,
+    "expectancy": 2.61,
+    "profit_factor": 1.56,
+    "total_pnl": 277.0,
+    "avg_win": 18.76,
+    "avg_loss": -7.57,
+    "max_dd": -95.75
+  }
+}

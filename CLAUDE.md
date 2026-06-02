@@ -368,6 +368,8 @@ Full report: `QA_AUDIT_REPORT.md`
 | `tests/unit/test_quality_engine.py` — 17 tests | ✅ done 2026-06-02 |
 | `tests/unit/test_confidence_engine.py` — 12 tests | ✅ done 2026-06-02 |
 | **Test count: 195/195 passing** | ✅ done 2026-06-02 |
+| `backtest_fusion.py` — 43-session backtest with confidence sizing + quality proxy | ✅ done 2026-06-02 |
+| **backtest_fusion.py result** (43 sessions, max_bars=2000): MaxDD improved +19.7 pts (-56.8 vs -76.5), avg_loss -5.25 vs -7.54, confidence sizing active. Quality gate uses backtest proxy (live engine uses full ConfluenceEngine score). | ✅ done 2026-06-02 |
 
 ---
 
