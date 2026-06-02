@@ -202,7 +202,13 @@ class MarketFeed:
                         self._connected = False
                 continue
 
-            except OSError:
+            except OSError as e:
+                _log.critical(
+                    "UDP receiver thread dying on OSError: %s — "
+                    "engine will process stale data until restarted", e
+                )
+                self._connected = False
+                self._running   = False
                 break
 
             except Exception as e:

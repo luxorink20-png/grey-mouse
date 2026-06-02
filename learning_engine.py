@@ -13,7 +13,11 @@
 
 import json
 import os
+import shutil
 from collections import defaultdict
+from log_config import get_logger
+
+_log = get_logger("learning_engine")
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -218,16 +222,18 @@ class LearningEngine:
                 "regime_data":   dict(self._regime_data),
                 "bq_regime":     dict(self._bq_regime_data),
             }
-            with open(self._log_path, "w") as f:
+            tmp_path = self._log_path + ".tmp"
+            with open(tmp_path, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2)
-        except Exception:
-            pass
+            shutil.move(tmp_path, self._log_path)   # atomic rename — safe on crash
+        except Exception as e:
+            _log.error("LearningEngine save failed: %s", e)
 
     def _load(self) -> None:
         try:
             if not os.path.exists(self._log_path):
                 return
-            with open(self._log_path) as f:
+            with open(self._log_path, encoding="utf-8") as f:
                 payload = json.load(f)
             for k, v in payload.get("data", {}).items():
                 self._data[k] = v
@@ -235,5 +241,14 @@ class LearningEngine:
                 self._regime_data[k] = v
             for k, v in payload.get("bq_regime", {}).items():
                 self._bq_regime_data[k] = v
-        except Exception:
-            pass
+        except json.JSONDecodeError as e:
+            _log.error(
+                "learning_data.json is corrupt (%s) — starting with empty state. "
+                "Backup saved to %s.bak", e, self._log_path
+            )
+            try:
+                shutil.copy(self._log_path, self._log_path + ".bak")
+            except Exception:
+                pass
+        except Exception as e:
+            _log.error("LearningEngine load failed: %s", e)

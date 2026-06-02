@@ -134,7 +134,7 @@ class TestAdjustExpansion:
         buf = PriceBuffer(size=10)
         for p in [7200, 7201, 7202]:
             buf.push(_make_bar(p))
-        result = {"event": "ACUMULACIÓN", "context": {"delta": 10, "volume": 50}}
+        result = {"event": "ACUMULACION", "context": {"delta": 10, "volume": 50}}
         penalty, _ = adjust_expansion(result, buf)
         assert penalty == 0
 

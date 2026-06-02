@@ -125,7 +125,7 @@ Feature flags and connection config live in `config.py` with environment-variabl
 | Constant | Source | Default | Override via |
 |----------|--------|---------|--------------|
 | `ENABLE_LOGGING` | `config.py` | `True` | `$env:GIBBZ_ENABLE_LOGGING=0` |
-| `OVERRIDE_SESSION` | `config.py` | `True` | `$env:GIBBZ_OVERRIDE_SESSION=0` |
+| `OVERRIDE_SESSION` | `config.py` | `False` | `$env:GIBBZ_OVERRIDE_SESSION=1` |
 | `USE_REAL_FEED` | `config.py` | `True` | `$env:GIBBZ_USE_REAL_FEED=0` |
 | `ENABLE_VOICE` | `config.py` | `True` | `$env:GIBBZ_ENABLE_VOICE=0` |
 | `UDP_HOST` | `config.py` | `127.0.0.1` | `$env:GIBBZ_UDP_HOST` |
@@ -197,7 +197,7 @@ tests/
     └── test_replay_pipeline.py (15 tests — UDP parse + session replay)
 ```
 
-**Status: 140/140 passing** (2026-05-30)
+**Status: 166/166 passing** (2026-06-02)
 
 ```powershell
 pytest                               # all 140

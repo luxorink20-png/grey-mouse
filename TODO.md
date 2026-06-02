@@ -87,6 +87,32 @@ All 19 P0–P3 findings from `QA_AUDIT_REPORT.md` are resolved as of 2026-05-30.
 
 ---
 
+## Wave 1+2 Fixes — 2026-06-02 ✅
+
+Applied 17 improvements across 7 modules (all tests: 166/166 passing).
+
+| Fix | File | Change |
+|-----|------|--------|
+| OVERRIDE_SESSION default | `config.py` | Changed default from `True` → `False` (production-safe) |
+| Activity history filter | `context_filter.py` | `>= 0` → `> 0` (exclude bridge's always-zero trade counts) |
+| VOL_RELEASE 2-condition | `context_filter.py` | Removed dead activity criterion; now uses ATR + volume only |
+| levels.json crash guard | `engine.py` | FileNotFoundError + JSONDecodeError handled with clear FATAL messages |
+| Simulation warning | `engine.py` | One-time warning logged when sim mode is active |
+| Duplicate learn_adj | `engine.py` | Removed redundant double computation of `learn_adj` |
+| ACUMULACION encoding | `event_engine.py` | Removed accent (`ACUMULACIÓN` → `ACUMULACION`) in 3 return sites |
+| Feedback logger | `feedback_engine.py` | Added `get_logger`; replaced bare print with `_log.error` |
+| Pending trade outcome | `feedback_engine.py` | `open_trade()` preserves WIN/LOSS when displaced by new signal instead of blindly TIMEOUT |
+| CSV error logging | `feedback_engine.py` | `print("[FEEDBACK CSV ERROR]")` → `_log.error(...)` |
+| LearningEngine logger | `learning_engine.py` | Added `get_logger`; `shutil` import for atomic save |
+| Atomic JSON save | `learning_engine.py` | `_save()` writes to `.tmp` then renames — crash-safe |
+| Silent save exception | `learning_engine.py` | `except Exception: pass` → `_log.error(...)` |
+| Load error handling | `learning_engine.py` | Separate `json.JSONDecodeError` path with `.bak` copy + `_log.error` |
+| OSError logging | `market_feed.py` | Critical OSError now logged; `_connected` + `_running` reset |
+| Test encoding fix | `tests/unit/test_event_engine.py` | Updated 3 assertions to use `ACUMULACION` |
+| Test encoding fix | `tests/unit/test_validator.py` | Updated 1 assertion to use `ACUMULACION` |
+
+---
+
 ## Sprint 6 — Edge Validation (2026-05-31)
 
 - [x] **[EV1]** Create `edge_validation.py` — 9-phase scientific edge validation (no code modifications)

@@ -2,6 +2,7 @@ import time
 import random
 import json
 import os
+import sys
 from state                import GibbzState
 from event_engine         import EventEngine
 from engine_view          import EngineView
@@ -36,8 +37,22 @@ _cf_log = _get_logger("context_filter.engine")
 
 # ── NIVELES DESDE ARCHIVO ──────────────────────────────────────────
 _levels_path = os.path.join(os.path.dirname(__file__), "levels.json")
-with open(_levels_path) as _f:
-    _lvl = json.load(_f)
+try:
+    with open(_levels_path, encoding="utf-8") as _f:
+        _lvl = json.load(_f)
+except FileNotFoundError:
+    print(
+        f"[FATAL] levels.json not found: {_levels_path}\n"
+        f"  Run: python scripts/update_context.py\n"
+        f"  Or:  python scripts/set_session.py {__import__('datetime').date.today()}"
+    )
+    sys.exit(1)
+except json.JSONDecodeError as _json_err:
+    print(
+        f"[FATAL] levels.json is corrupt: {_json_err}\n"
+        f"  Restore from backup or run: python scripts/update_context.py"
+    )
+    sys.exit(1)
 
 VAH = float(_lvl["volume_profile"]["VAH"])
 POC = float(_lvl["volume_profile"]["POC"])
@@ -97,6 +112,13 @@ _sim_price = POC
 
 
 def simulate_price():
+    """SIMULATION ONLY — not for live trading. Set GIBBZ_USE_REAL_FEED=1 in production."""
+    if not getattr(simulate_price, "_warned", False):
+        simulate_price._warned = True
+        _cf_log.warning(
+            "SIMULATION MODE: random price data active — "
+            "set GIBBZ_USE_REAL_FEED=1 for live trading"
+        )
     global _sim_price
     move       = random.uniform(-4.0, 4.0)
     _sim_price = round(_sim_price + move, 2)
@@ -237,13 +259,10 @@ def run_engine():
 
             event_key = result.get("event", "NONE")
             zone_key  = getattr(context, "zone", "UNKNOWN")
-            narr_key  = ""
-            learn_adj = learning.get_adjustment(event_key, zone_key)
 
             narrative = intent.analyze(result, context, analysis, validation)
 
             narr_key  = getattr(narrative, "narrative", "UNCLEAR")
-            learn_adj = learning.get_adjustment(event_key, zone_key, narr_key)
 
             risk_result = risk.analyze(
                 price         = raw["price"],

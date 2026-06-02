@@ -113,7 +113,7 @@ class ContextFilter:
             self._atr_history.append(atr)
         if vol > 0:
             self._vol_history.append(vol)
-        if act >= 0:
+        if act > 0:                          # exclude zeros — bridge sends 0 always
             self._act_history.append(act)
 
     def register_trade(self, pnl: float, win: bool) -> None:
@@ -244,17 +244,15 @@ class ContextFilter:
         avg_vol = sum(self._vol_history) / max(len(self._vol_history), 1)
         high_volume = avg_vol > 0 and cur_vol > avg_vol * _VOLUME_RATIO_THRESHOLD
 
-        # Check 4: actividad (trades por barra)
-        cur_act = float(bar.get("trades", 0))
-        avg_act = sum(self._act_history) / max(len(self._act_history), 1)
-        high_activity = avg_act > 0 and cur_act > avg_act * _ACTIVITY_RATIO_THRESHOLD
+        # Check 4 removed: GibbzBridge.cs always sends trades=0 (market_feed.py:51),
+        # making the activity criterion permanently False. Using 2-condition detection
+        # (ATR + volume) which are correctly populated by the bridge.
 
-        if is_midday and high_volatility and high_volume and high_activity:
+        if is_midday and high_volatility and high_volume:
             return (
                 f"hour={hour_et}ET "
                 f"ATR={cur_atr:.2f}/{avg_atr:.2f}({cur_atr/max(avg_atr,0.01):.1f}x) "
-                f"vol={cur_vol:.0f}/{avg_vol:.0f}({cur_vol/max(avg_vol,0.01):.1f}x) "
-                f"act={cur_act:.0f}/{avg_act:.0f}({cur_act/max(avg_act,0.01):.1f}x)"
+                f"vol={cur_vol:.0f}/{avg_vol:.0f}({cur_vol/max(avg_vol,0.01):.1f}x)"
             )
         return None
 

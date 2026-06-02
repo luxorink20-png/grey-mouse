@@ -243,16 +243,16 @@ class EventEngine:
 
         # ABSORCIÓN — large delta with no price displacement
         if absorption:
-            return ("ACUMULACIÓN", 75,
+            return ("ACUMULACION", 75,
                     "Absorción detectada. Precio sin desplazamiento.")
 
         # NARROW RANGE
         if abs(price_move) < self.THRESHOLD_ACUMULACION:
             conf = max(40, 75 - int(abs(price_move) * 10))
-            return ("ACUMULACIÓN", conf,
+            return ("ACUMULACION", conf,
                     f"Rango estrecho. Mov:{price_move:+.2f}")
 
-        return ("ACUMULACIÓN", 30,
+        return ("ACUMULACION", 30,
                 f"Sin señal dominante. Mov:{price_move:+.2f}")
 
     # ──────────────────────────────────────────────────────────────

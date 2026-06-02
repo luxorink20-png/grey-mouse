@@ -22,6 +22,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from collections import deque
 from typing import Optional
+from log_config import get_logger
+
+_log = get_logger("feedback_engine")
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -166,11 +169,23 @@ class FeedbackEngine:
         if not risk_result.approved:
             return
 
-        # If existing pending trade, timeout it
+        # If existing pending trade, resolve it before opening new one.
+        # Preserve the correct outcome — do not blindly TIMEOUT a trade that
+        # already reached target_1 or was stopped out.
         if self._pending is not None:
-            self._pending.result = "TIMEOUT"
-            self._pending.close_time = datetime.now().strftime("%H:%M:%S")
-            self._close_trade(self._pending)
+            tr = self._pending
+            tr.close_time = datetime.now().strftime("%H:%M:%S")
+            if tr.hit_target_1 or tr.follow_through:
+                tr.result     = "WIN"
+                tr.exit_price = tr.target_1
+                tr.pnl_pts    = abs(tr.target_1 - tr.entry_price)
+            elif tr.hit_stop:
+                tr.result     = "LOSS"
+                tr.exit_price = tr.stop
+                tr.pnl_pts    = -(tr.risk_pts)
+            else:
+                tr.result = "TIMEOUT"
+            self._close_trade(tr)
 
         self._counter += 1
 
@@ -428,4 +443,7 @@ class FeedbackEngine:
             with open(self._filepath, "a", newline="", encoding="utf-8") as f:
                 csv.writer(f).writerow(row)
         except Exception as e:
-            print("[FEEDBACK CSV ERROR] " + str(e))
+            _log.error(
+                "trade CSV write failed (trade_id=%s, result=%s): %s",
+                tr.trade_id, tr.result, e
+            )

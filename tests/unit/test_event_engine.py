@@ -139,12 +139,12 @@ class TestFallo:
         eng = self._declining_engine()
         r = eng.process(bar(7202, high=7203, low=7201, ask=30, bid=600))
         # AGOTAMENTO fires when last_event==INTENTO+reversal; FALLO when absorbed
-        assert r["event"] in ("FALLO", "INTENTO", "AGOTAMIENTO", "ACUMULACIÓN")
+        assert r["event"] in ("FALLO", "INTENTO", "AGOTAMIENTO", "ACUMULACION")
 
     def test_bearish_spike_with_positive_delta_on_rising_engine(self):
         eng = self._rising_engine()
         r = eng.process(bar(7196, high=7197, low=7195, ask=600, bid=30))
-        assert r["event"] in ("FALLO", "INTENTO", "AGOTAMIENTO", "ACUMULACIÓN")
+        assert r["event"] in ("FALLO", "INTENTO", "AGOTAMIENTO", "ACUMULACION")
 
     def test_fallo_has_nonzero_confidence_when_triggered(self):
         """If FALLO fires, its confidence must be > 0."""
@@ -168,8 +168,7 @@ class TestAgotamiento:
         # Reversal downward with opposing delta — triggers AGOTAMIENTO
         r = eng.process(bar(7202, high=7203, low=7201, ask=50, bid=500))
         # AGOTAMIENTO requires last_event == INTENTO — regime/timing dependent
-        assert r["event"] in ("AGOTAMIENTO", "FALLO", "INTENTO", "ACUMULAÇÃO",
-                              "ACUMULACIÓN", "ACUMULACIÓN")
+        assert r["event"] in ("AGOTAMIENTO", "FALLO", "INTENTO", "ACUMULACION")
 
 
 # ── ACUMULACIÓN ───────────────────────────────────────────────────────
