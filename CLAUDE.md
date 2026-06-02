@@ -361,6 +361,13 @@ Full report: `QA_AUDIT_REPORT.md`
 | **Statistical validation**: bootstrap 98%/200 runs improve WR; p=0.16 (underpowered, need 200+ trades) | ✅ done 2026-06-02 |
 | **VERDICT**: CONDITIONAL — Approved for paper trading validation; implement Wave 1 first | ✅ done 2026-06-02 |
 | `INSTITUTIONAL_FUSION_READINESS_REPORT.md` — full dry-run report with go/no-go decision | ✅ done 2026-06-02 |
+| **Wave 1 Implementation (2026-06-02)** — quality gate + confidence sizing in live engine | ✅ done 2026-06-02 |
+| `quality_engine.py` — production quality gate 0-100, threshold 62, wired in engine.py | ✅ done 2026-06-02 |
+| `confidence_engine.py` — rolling 20-trade confidence 0-1, position multiplier 0.5x-1.0x | ✅ done 2026-06-02 |
+| `engine.py` — quality gate + confidence sizing between risk approval and trade open | ✅ done 2026-06-02 |
+| `tests/unit/test_quality_engine.py` — 17 tests | ✅ done 2026-06-02 |
+| `tests/unit/test_confidence_engine.py` — 12 tests | ✅ done 2026-06-02 |
+| **Test count: 195/195 passing** | ✅ done 2026-06-02 |
 
 ---
 
@@ -374,6 +381,7 @@ Full report: `QA_AUDIT_REPORT.md`
 6. Engine pipeline order in `engine.py` is load-bearing: `event → levels → confluence → validator → intent → risk`. Do not reorder without running the full test suite.
 7. `config.py` is the single source of truth for feature flags and connection config — do not re-declare these constants in other modules.
 8. `ContextFilter` has two independent layers: `is_session_filtered()` (backtest + live) filters entire sessions by type; `should_skip()` (live engine only) filters individual bars by ATR/volume. Only layer 1 affects backtest results. Changing bar-level thresholds has zero effect on backtest trade count.
+9. **Wave 1 (2026-06-02)**: `QualityEngine` (threshold=62) and `ConfidenceEngine` are wired in `engine.py` between `risk_result.approved` check and `feedback.open_trade()`. Quality gate rejects low-scoring setups (score < 62); confidence multiplier (0.5x–1.0x) scales position_size. Both are live-only — `backtest_engine.py` is unaffected. `ConfidenceEngine.register_outcome()` must be called on every closed trade.
 
 ---
 

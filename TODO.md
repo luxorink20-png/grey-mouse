@@ -51,6 +51,10 @@ Track progress here. Mark items `[x]` as completed.
 
 ## New Findings (2026-06-02)
 
+- [x] **[IF-WAVE1]** Wave 1 implemented: `quality_engine.py` + `confidence_engine.py` wired into
+  `engine.py`. Quality gate (threshold 62) + confidence position multiplier (0.5x-1.0x).
+  195/195 tests passing. Validate with 200+ paper trades; target WR ≥ 43%, PF ≥ 1.75.
+
 - [x] **[IF-DRY-RUN]** Institutional Fusion dry-run validation complete — 5 simulation modules
   created in `simulation/institutional_fusion/`, comparative backtest run, statistical
   validation complete (bootstrap 98% positive, p=0.16 underpowered at 84-106 trades),

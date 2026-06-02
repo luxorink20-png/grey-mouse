@@ -32,6 +32,8 @@ from config import (
     UDP_HOST, UDP_PORT,
 )
 from context_filter import ContextFilter
+from quality_engine import QualityEngine
+from confidence_engine import ConfidenceEngine
 from log_config import get_logger as _get_logger
 _cf_log = _get_logger("context_filter.engine")
 
@@ -104,7 +106,9 @@ _vwap_eng_rtr   = VWAPEngine()
 _fa_det_rtr     = FADetector(vah=VAH, val=VAL)
 _va80_det_rtr   = VA80Detector(vah=VAH, val=VAL, open_price=OPEN_PRICE)
 setup_router    = SetupRouter()
-_context_filter = ContextFilter()
+_context_filter  = ContextFilter()
+_quality_engine  = QualityEngine(threshold=62)
+_confidence_eng  = ConfidenceEngine()
 
 feed = MarketFeed(host=UDP_HOST, port=UDP_PORT) if USE_REAL_FEED else None
 
@@ -287,20 +291,43 @@ def run_engine():
             )
 
             if risk_result.approved:
-                _cf_skip, _cf_reason = _context_filter.should_skip(raw)
-                if _cf_skip:
+                # ── WAVE 1: QUALITY GATE ──────────────────────────────
+                quality_r = _quality_engine.score(
+                    confluence    = analysis,
+                    validation    = validation,
+                    level_context = context,
+                    intent        = narrative,
+                    risk_result   = risk_result,
+                )
+                if not quality_r.passes:
                     _cf_log.info(
-                        "CONTEXT SKIP | %s | setup=%s price=%.2f",
-                        _cf_reason, setup_r.signal_type, raw["price"],
+                        "QUALITY SKIP | score=%d<%d | %s | price=%.2f",
+                        quality_r.score, quality_r.threshold,
+                        quality_r.reason, raw["price"],
                     )
                 else:
-                    feedback.open_trade(
-                        risk_result  = risk_result,
-                        analysis     = analysis,
-                        narrative    = narrative,
-                        session_name = session_name,
-                        signal_price = raw["price"],
+                    # ── WAVE 1: CONFIDENCE SIZING ─────────────────────
+                    conf_r = _confidence_eng.score(quality_r.score)
+                    # Apply multiplier: size shrinks on low-confidence bars,
+                    # never exceeds the base size approved by risk engine.
+                    risk_result.position_size = round(
+                        risk_result.position_size * conf_r.multiplier, 3
                     )
+
+                    _cf_skip, _cf_reason = _context_filter.should_skip(raw)
+                    if _cf_skip:
+                        _cf_log.info(
+                            "CONTEXT SKIP | %s | setup=%s price=%.2f",
+                            _cf_reason, setup_r.signal_type, raw["price"],
+                        )
+                    else:
+                        feedback.open_trade(
+                            risk_result  = risk_result,
+                            analysis     = analysis,
+                            narrative    = narrative,
+                            session_name = session_name,
+                            signal_price = raw["price"],
+                        )
 
             closed_trade = feedback.update(raw["price"])
             fb_summary   = feedback.get_summary()
@@ -308,9 +335,15 @@ def run_engine():
             if closed_trade is not None:
                 direction = getattr(closed_trade, "direction", "NONE")
                 tr_result = getattr(closed_trade, "result",    "UNKNOWN")
+                tr_pnl    = getattr(closed_trade, "pnl_pts",   0.0)
                 _context_filter.register_trade(
-                    pnl=getattr(closed_trade, "pnl", 0.0),
+                    pnl=tr_pnl,
                     win=tr_result == "WIN",
+                )
+                # Wave 1: keep confidence engine rolling window current
+                _confidence_eng.register_outcome(
+                    win     = tr_result == "WIN",
+                    pnl_pts = tr_pnl,
                 )
                 tr_score  = getattr(closed_trade, "score",     0)
                 tr_zone   = getattr(closed_trade, "zone",      zone_key)
