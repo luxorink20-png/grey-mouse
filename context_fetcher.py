@@ -69,15 +69,29 @@ def load_context(strict: bool = False) -> dict:
     ctx = _read_levels_json()
     today_str = date.today().isoformat()
 
-    # Layer 1: Try to get PDH/PDL/ONH/ONL from GibbzBridge.cs output
+    # Layer 1: Try to get PDH/PDL/ONH/ONL/VAH/VAL/POC from GibbzBridge.cs output
     bridge_data = _read_bridge_context()
     if bridge_data and bridge_data.get("date") == today_str:
         ctx["session"]["prev_high"]  = bridge_data.get("pdh", ctx["session"]["prev_high"])
         ctx["session"]["prev_low"]   = bridge_data.get("pdl", ctx["session"]["prev_low"])
-        ctx["session"]["onh"]        = bridge_data.get("onh", ctx["session"]["onh"])
-        ctx["session"]["onl"]        = bridge_data.get("onl", ctx["session"]["onl"])
-        ctx["_source_pdh_pdl"]       = "rithmic_atas"
-        ctx["_source_onh_onl"]       = "rithmic_atas"
+        onh = bridge_data.get("onh")
+        onl = bridge_data.get("onl")
+        if onh is not None: ctx["session"]["onh"] = float(onh)
+        if onl is not None: ctx["session"]["onl"] = float(onl)
+        ctx["_source_pdh_pdl"] = "rithmic_atas"
+        ctx["_source_onh_onl"] = "rithmic_atas"
+
+        # VAH/VAL/POC: present only when ATAS is on a Footprint/Cluster chart
+        b_vah = bridge_data.get("vah")
+        b_val = bridge_data.get("val")
+        b_poc = bridge_data.get("poc")
+        if b_vah is not None and b_val is not None and b_poc is not None:
+            ctx["volume_profile"]["VAH"] = float(b_vah)
+            ctx["volume_profile"]["VAL"] = float(b_val)
+            ctx["volume_profile"]["POC"] = float(b_poc)
+            ctx["_source_vah_val"]       = "rithmic_atas"
+        else:
+            ctx["_source_vah_val"] = "levels_json"
     else:
         # Layer 2: Check if levels.json is fresh for today
         levels_date = ctx.get("_date", "")

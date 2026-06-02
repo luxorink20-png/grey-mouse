@@ -184,6 +184,15 @@ All 19 P0–P3 findings from `QA_AUDIT_REPORT.md` are resolved as of 2026-05-30.
   - `requirements.txt`: yfinance==1.4.1 agregado
   - `levels.json`: campo `_date` agregado para freshness tracking
   - **Nota**: VAH/VAL/POC siguen siendo manuales (volume profile requiere ATAS)
+- [x] **[PT4]** VAH/VAL/POC automaticos via GibbzBridge.cs v2.3 ✅ 2026-06-01
+  - `GibbzBridge.cs`: `UpdateVolumeProfile()` acumula volumen por precio usando `dynamic` dispatch
+    sobre `GetAllPriceLevels()` (ATAS footprint API); graceful fallback en charts OHLCV
+  - `ComputeValueArea()`: algoritmo estandar CME TPO — expande desde POC tomando mayor volumen adyacente
+  - Bug fix: `bar` parameter faltaba en `TrackContextLevels()` — corregido
+  - `WriteContextLevels()` incluye vah/val/poc/vp_available en JSON
+  - `context_fetcher.py`: lee vah/val/poc del bridge file; fuente = "rithmic_atas" o "levels_json"
+  - `docs/INSTALL_ATAS_INDICATOR.md`: guia de instalacion con instrucciones de footprint chart
+  - **Requisito**: chart ATAS debe ser Footprint/Cluster (no OHLCV) para VAH/VAL/POC automaticos
   - `TradeRecord` nuevos campos: `signal_price` (precio al momento del signal) y `slippage_ticks`
   - `open_trade()` acepta `signal_price=` kwarg; engine.py y run_replay.py pasan `raw["price"]`
   - Slippage calculado en `update()` en el primer tick: `abs(entry - signal) / tick`
