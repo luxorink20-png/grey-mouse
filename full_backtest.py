@@ -17,6 +17,13 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Reconfigure stdout to UTF-8 so print() calls inside HistoricalContextLoader
+# (box-drawing chars) don't fail on Windows cp1252 terminals.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except AttributeError:
+    pass
+
 from event_engine              import EventEngine
 from confluence_engine         import ConfluenceEngine, ConfluenceResult
 from validator                 import Validator
