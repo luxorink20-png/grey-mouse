@@ -380,6 +380,10 @@ Full report: `QA_AUDIT_REPORT.md`
 | `market_feed.py` — R2: `recv_ts` field added to every parsed tick; live transport_ms = (recv_ts-timestamp)*1000 | ✅ done 2026-06-02 |
 | **Tests: 202/202 passing** (was 195 before; 7 new reliability tests) | ✅ done 2026-06-02 |
 | `reports/ATAS_BRIDGE_CAPABILITY_AUDIT_V2.md` — post-patch V2 audit (Data Quality 72→78, Reliability 85/100 new) | ✅ done 2026-06-02 |
+| **Post-Bridge Hardening Audit (2026-06-02)** — 5-phase final audit before paper trading | ✅ done 2026-06-02 |
+| `reports/BRIDGE_HARDENING_IMPACT_REPORT.md` — V1 vs V2 comparative: tick loss 97%→0%, timestamp 1s→1ms, scores table | ✅ done 2026-06-02 |
+| `reports/PRE_PAPER_TRADING_FINAL_AUDIT.md` — final readiness audit: READY, Semi-Quant classification, paper checklist | ✅ done 2026-06-02 |
+| **202/202 tests confirmed passing** — full suite run post-hardening; 0 regressions | ✅ done 2026-06-02 |
 
 ---
 
@@ -388,7 +392,7 @@ Full report: `QA_AUDIT_REPORT.md`
 1. `VAL < POC < VAH` — enforced in `levels.py:54`. Violating crashes `InstitutionalLevels.__init__`.
 2. `MIN_SCORE_TO_TRADE = 45` — changing this shifts all backtest results. Update `QA_AUDIT_REPORT.md` if changed.
 3. `MIN_RR = 1.5` — minimum risk-reward. All position approval logic depends on this.
-4. `MarketFeed._latest` must only be read/written inside `self._lock`.
+4. `MarketFeed._queue` (deque, maxlen=128) must only be read/written inside `self._lock`. The old `_latest` slot is replaced — do not reintroduce it.
 5. `VoiceEngine.say()` is non-blocking — never call `say_blocking()` from the main engine loop.
 6. Engine pipeline order in `engine.py` is load-bearing: `event → levels → confluence → validator → intent → risk`. Do not reorder without running the full test suite.
 7. `config.py` is the single source of truth for feature flags and connection config — do not re-declare these constants in other modules.

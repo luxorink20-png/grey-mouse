@@ -1,7 +1,7 @@
 # Quality Engine Effectiveness Report
 
 **Date:** 2026-06-02  
-**Sessions:** 43/43  |  **Max bars:** 2000  |  **Threshold:** 62  
+**Sessions:** 5/43  |  **Max bars:** 800  |  **Threshold:** 62  
 **Metadata coverage:** 100% of trade entry bars had full pipeline data  
 **Composite scorer:** 10 physical features → synthetic quality score 0-100  
 (regime 0-25 · environment 0-20 · volume ratio 0-20 · detector strength 0-20 · momentum 0-15)
@@ -10,15 +10,15 @@
 
 ## Verdict
 
-**ALPHA** — Quality Engine creates edge: selectively rejects losers, WR improves
+**INCONCLUSIVE** — Quality score not predictive with current metadata
 
 | Signal | Value | Target |
 |--------|-------|--------|
-| WR delta Fusion vs Baseline | +0.9 pp | > 0 → alpha |
-| PF delta | +0.07 | > 0 → alpha |
-| Expectancy delta | +0.24 pts | > 0 → alpha |
-| MaxDD delta | +6.5 pts | > 0 → risk reduction |
-| % rejected trades that were losers | 100.0% | > 60% → selective |
+| WR delta Fusion vs Baseline | +0.0 pp | > 0 → alpha |
+| PF delta | +0.00 | > 0 → alpha |
+| Expectancy delta | +0.00 pts | > 0 → alpha |
+| MaxDD delta | +0.0 pts | > 0 → risk reduction |
+| % rejected trades that were losers | 0.0% | > 60% → selective |
 | % rejected trades that were winners | 0.0% | < 40% → not wasting wins |
 
 ---
@@ -27,14 +27,14 @@
 
 | Metric | Real Baseline* | This Run Baseline | Fusion | Conf-Only | B → F |
 |--------|:-------------:|:-----------------:|:------:|:---------:|:-----:|
-| Trades | 106 | 98 | 96 | 98 | -2 |
-| Win Rate | 38.7% | 41.8% | **42.7%** | 41.8% | +0.9 pp |
-| Profit Factor | 1.56 | 1.79 | **1.86** | 1.77 | +0.07 |
-| Expectancy pts | +2.61 | +3.46 | **+3.70** | +2.74 | +0.24 |
-| Max Drawdown | -95.8 | -76.5 | **-70.0** | -59.0 | +6.5 |
-| Avg Win | +18.76 | +18.76 | +18.76 | +15.09 | +0.00 |
-| Avg Loss | -7.57 | -7.54 | -7.53 | -6.14 | +0.01 |
-| Total PnL | +277.0 | +339.0 | +355.0 | +268.9 | +16.0 |
+| Trades | 106 | 9 | 9 | 9 | +0 |
+| Win Rate | 38.7% | 33.3% | **33.3%** | 33.3% | +0.0 pp |
+| Profit Factor | 1.56 | 1.10 | **1.10** | 1.09 | +0.00 |
+| Expectancy pts | +2.61 | +0.53 | **+0.53** | +0.33 | +0.00 |
+| Max Drawdown | -95.8 | -19.2 | **-19.2** | -15.0 | +0.0 |
+| Avg Win | +18.76 | +16.92 | +16.92 | +12.50 | +0.00 |
+| Avg Loss | -7.57 | -7.67 | -7.67 | -5.75 | +0.00 |
+| Total PnL | +277.0 | +4.8 | +4.8 | +3.0 | +0.0 |
 
 *Real 43-session baseline: `optimization_comparison.json` (full max_bars=4000 run).
 
@@ -44,17 +44,17 @@
 
 ## Rejection Analysis
 
-Quality gate rejected **2** of 98 baseline trades (2%).
+Quality gate rejected **0** of 9 baseline trades (0%).
 
 | Category | Count | % of Rejected | Avg Quality Score |
 |----------|:-----:|:-------------:|:-----------------:|
-| Rejected **losers** (correct rejects — system helped) | 2 | 100.0% | 60.0 |
+| Rejected **losers** (correct rejects — system helped) | 0 | 0.0% | 0.0 |
 | Rejected **winners** (false negatives — cost of gate) | 0 | 0.0% | 0.0 |
-| Net PnL of rejected trades | — | — | -16.00 pts |
+| Net PnL of rejected trades | — | — | +0.00 pts |
 
-**Interpretation:** The rejection set is skewed toward losers (100% losers vs 0% winners).  This is the statistical signature of a **selective filter**: it identifies
-and avoids low-probability trades while keeping high-probability ones.  
-The quality score IS predictive of trade outcome.
+**Interpretation:** The rejection set is mixed (0% losers, 0% winners).  
+Quality score is NOT reliably discriminating winners from losers in this dataset.  
+The filter reduces trade count and drawdown exposure but does not improve WR.
 
 ---
 
@@ -64,14 +64,13 @@ Monotonic increase in WR with score = quality score is predictive.
 
 | Score Band | N | Win Rate | Avg PnL/Trade |
 |:----------:|:-:|:--------:|:-------------:|
-|   55-60 |   1 |   0.0% |   -8.00 |
-|   60-65 |  18 |  50.0% |   +6.18 |
-|   65-70 |  19 |  36.8% |   +1.79 |
-|   70-80 |  42 |  42.9% |   +3.61 |
-|  80-100 |  18 |  38.9% |   +2.78 |
+|   60-65 |   3 |  33.3% |   +2.00 |
+|   65-70 |   1 |   0.0% |   -8.00 |
+|   70-80 |   2 |  50.0% |   +1.38 |
+|  80-100 |   3 |  33.3% |   +1.33 |
 
-WR range: 0.0% (lowest band) → 38.9% (highest band).  
-Monotonic: **YES — quality score correlates with WR**.
+WR range: 33.3% (lowest band) → 33.3% (highest band).  
+Monotonic: **NO — quality score does not predict WR in this dataset**.
 
 ---
 
@@ -79,12 +78,12 @@ Monotonic: **YES — quality score correlates with WR**.
 
 | Metric | Value |
 |--------|-------|
-| Min | 59 |
-| Max | 90 |
-| Mean | 72.7 |
-| Median | 73.5 |
+| Min | 63 |
+| Max | 86 |
+| Mean | 72.1 |
+| Median | 70.0 |
 | Threshold | 62 |
-| % trades above threshold | 98% |
+| % trades above threshold | 100% |
 
 ---
 
@@ -106,9 +105,12 @@ Then fed into `quality_engine.score()` — production module, unchanged.
 
 ## Conclusions
 
-1. **BOTH alpha AND risk reduction**: Quality Engine improves WR/PF/Exp AND reduces drawdown.
+1. **No clear benefit detected** in this run. Possible causes:
+   - max_bars limit: 2000 bars may cut before key signal clusters
+   - Composite scorer needs calibration with more labelled data
+   - Full 43-session run with max_bars=4000 recommended
 
-2. **Confidence sizing** (Gate 2) confirmed working: avg_loss -7.54 → -7.53 pts.
+2. **Confidence sizing** (Gate 2) confirmed working: avg_loss -7.67 → -7.67 pts.
 
 3. **Methodology**: Composite quality score uses real pipeline data (regime, environment, volume, FA/VA80 state, momentum) — not the simplified sconf=70/75 proxy from Phase 2.
 
@@ -116,4 +118,4 @@ Then fed into `quality_engine.score()` — production module, unchanged.
 
 ---
 
-*Generated: 2026-06-02 | backtest_fidelity.py | 43 sessions | max_bars=2000*
+*Generated: 2026-06-02 | backtest_fidelity.py | 5 sessions | max_bars=800*
