@@ -1,9 +1,16 @@
 # ╔══════════════════════════════════════════════════════════════════╗
 #  GIBBZ SMC COP — market_feed.py
-#  ATAS UDP Bridge Receiver v1.1
+#  ATAS UDP Bridge Receiver v1.2
 #
-#  Receives real bar data from GibbzBridge.cs via UDP.
-#  Replaces simulate_price() in engine.py with real market data.
+#  v1.2 changes (bridge hardening):
+#  - R1 fix: replaced single-slot _latest with bounded FIFO deque
+#    (maxlen=128) — eliminates tick-loss during burst periods.
+#    Producer: deque.append().  Consumer: deque.popleft() (FIFO).
+#  - R2 fix: _parse() now adds recv_ts (Python wall-clock, sub-ms)
+#    to every parsed tick.  Enables live latency measurement:
+#    transport_ms = (recv_ts - timestamp) * 1000
+#    Bridge v2.3+ sends millisecond-precision ATAS timestamps
+#    (field 10); float() parse preserves decimal part.
 #
 #  DATA FORMAT FROM ATAS (CSV) — GibbzBridge.cs payload order:
 #  pos 0  = Close  ← PRICE
@@ -16,19 +23,20 @@
 #  pos 7  = AskVol  (calculado: (Volume + Delta) / 2)
 #  pos 8  = BidVol  (calculado: (Volume - Delta) / 2)
 #  pos 9  = Trades  (siempre 0 desde el Bridge)
-#  pos 10 = Timestamp (Unix seconds)
+#  pos 10 = Timestamp (Unix seconds — float ms-precision from v2.3)
 #  pos 11 = Symbol
 #  pos 12 = BarIndex
 #
 #  USAGE:
 #  feed = MarketFeed(port=9999)
 #  feed.start()
-#  raw = feed.get_latest()   # returns dict or None
+#  raw = feed.get_latest_blocking()  # returns oldest buffered tick
 # ╚══════════════════════════════════════════════════════════════════╝
 
 import socket
 import threading
 import time
+from collections import deque
 from typing import Optional
 from log_config import get_logger
 
@@ -62,20 +70,32 @@ DEBUG_PRINT_RAW = False
 
 class MarketFeed:
     """
-    GIBBZ UDP Market Feed Receiver.
+    GIBBZ UDP Market Feed Receiver v1.2.
 
     Listens on UDP port for data from GibbzBridge ATAS indicator.
     Runs in a background thread — non-blocking.
-    Engine calls get_latest() each tick to get most recent bar.
+
+    Tick storage (R1 fix):
+    - _queue: deque(maxlen=128) — bounded FIFO, replaces single-slot _latest.
+    - Producer (receiver thread): deque.append() — newest at right.
+    - Consumer (engine thread):   deque.popleft() — processes oldest first.
+    - At maxlen=128 and peak 327 ticks/sec, buffer holds ~390ms of data.
+    - If queue fills, oldest tick is silently discarded (bounded drop vs
+      unbounded accumulation). In TIME-5s mode the bar OHLCV is unaffected.
+
+    Timestamp (R2 fix):
+    - recv_ts added to every parsed tick (Python time.time(), sub-ms).
+    - Live latency = (recv_ts - timestamp) * 1000  ms.
+    - Bridge v2.3+ sends float ms-precision ATAS timestamp in field 10.
 
     Thread safety:
-    - _latest is written by receiver thread
-    - _latest is read by engine thread
-    - Protected by threading.Lock()
+    - _queue is written by receiver thread, read/consumed by engine thread.
+    - Lock protects the check+popleft sequence.
     """
 
-    BUFFER_SIZE = 1024
-    TIMEOUT     = 0.1
+    BUFFER_SIZE  = 1024
+    TIMEOUT      = 0.1
+    QUEUE_MAXLEN = 128    # ~390ms at peak 327 ticks/sec
 
     def __init__(self,
                  host: str = "127.0.0.1",
@@ -85,7 +105,7 @@ class MarketFeed:
         self._socket:    Optional[socket.socket]         = None
         self._thread:    Optional[threading.Thread]      = None
         self._running:   bool                            = False
-        self._latest:    Optional[dict]                  = None
+        self._queue:     deque                           = deque(maxlen=self.QUEUE_MAXLEN)
         self._lock:      threading.Lock                  = threading.Lock()
         self._count:     int                             = 0
         self._errors:    int                             = 0
@@ -122,21 +142,25 @@ class MarketFeed:
             pass
 
     # ──────────────────────────────────────────────────────────────
-    #  GET LATEST
+    #  GET TICK (public consumer API)
     # ──────────────────────────────────────────────────────────────
 
     def get_latest(self) -> Optional[dict]:
+        """Peek at the most-recently received tick without consuming it."""
         with self._lock:
-            return self._latest
+            return self._queue[-1] if self._queue else None
 
     def get_latest_blocking(self, timeout: float = 5.0) -> Optional[dict]:
+        """
+        Pop and return the oldest buffered tick (FIFO).
+        Blocks up to `timeout` seconds if queue is empty.
+        Returns None on timeout.
+        """
         deadline = time.time() + timeout
         while time.time() < deadline:
-            data = self.get_latest()
-            if data is not None:
-                with self._lock:
-                    self._latest = None
-                return data
+            with self._lock:
+                if self._queue:
+                    return self._queue.popleft()
             time.sleep(0.05)
         return None
 
@@ -153,6 +177,12 @@ class MarketFeed:
         return self._count
 
     @property
+    def queue_size(self) -> int:
+        """Number of ticks currently buffered and waiting to be consumed."""
+        with self._lock:
+            return len(self._queue)
+
+    @property
     def last_raw(self) -> str:
         return self._last_raw
 
@@ -160,7 +190,7 @@ class MarketFeed:
         if not self._running:
             return "STOPPED"
         if self._connected:
-            return "LIVE  packets=" + str(self._count)
+            return "LIVE  packets=" + str(self._count) + "  queued=" + str(self.queue_size)
         return "WAITING for ATAS data on port " + str(self._port)
 
     # ──────────────────────────────────────────────────────────────
@@ -191,7 +221,7 @@ class MarketFeed:
                 parsed = self._parse(raw)
                 if parsed:
                     with self._lock:
-                        self._latest = parsed
+                        self._queue.append(parsed)   # R1: buffered FIFO
                     self._count      += 1
                     last_packet_time  = time.time()
                     self._connected   = True
@@ -257,6 +287,10 @@ class MarketFeed:
                 "trades":     trades,
                 "timestamp":  ts,
                 "symbol":     symbol,
+                # R2: Python wall-clock when packet arrived at receiver thread.
+                # Live latency (ms) = (recv_ts - timestamp) * 1000
+                # (only meaningful when bridge sends ms-precision timestamps)
+                "recv_ts":    time.time(),
             }
 
         except (ValueError, IndexError):

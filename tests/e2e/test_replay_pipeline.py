@@ -79,10 +79,12 @@ class TestMarketFeedParse:
 
     @pytest.fixture
     def feed(self):
+        from collections import deque as _deque
         f = MarketFeed.__new__(MarketFeed)
         f._host = "127.0.0.1"; f._port = 9999
         f._socket = None; f._thread = None; f._running = False
-        f._latest = None; f._lock = __import__("threading").Lock()
+        f._queue = _deque(maxlen=128)   # v1.2: queue replaces _latest slot
+        f._lock = __import__("threading").Lock()
         f._count = 0; f._errors = 0; f._last_raw = ""
         f._connected = False
         return f
@@ -127,6 +129,92 @@ class TestMarketFeedParse:
         parsed = feed._parse(raw)
         if parsed:
             assert parsed.get("symbol") == "MESM6"
+
+    # ── v1.2 hardening tests ──────────────────────────────────────
+
+    def test_recv_ts_present_in_parsed_dict(self, feed):
+        """R2 fix: recv_ts must be present in every parsed tick."""
+        raw = self._csv()
+        parsed = feed._parse(raw)
+        assert parsed is not None
+        assert "recv_ts" in parsed
+        assert isinstance(parsed["recv_ts"], float)
+        assert parsed["recv_ts"] > 0
+
+    def test_recv_ts_is_recent(self, feed):
+        """recv_ts must be within 1 second of Python wall clock."""
+        raw = self._csv()
+        before = time.time()
+        parsed = feed._parse(raw)
+        after = time.time()
+        assert parsed is not None
+        assert before <= parsed["recv_ts"] <= after + 0.001
+
+    def test_ms_precision_timestamp_preserved(self, feed):
+        """R2 fix: float timestamp with ms precision must survive the parse."""
+        raw = self._csv(ts=1744286460.123)
+        parsed = feed._parse(raw)
+        assert parsed is not None
+        assert abs(parsed["timestamp"] - 1744286460.123) < 0.001
+
+    def test_queue_buffers_multiple_packets(self, feed):
+        """R1 fix: queue must store all packets, not just the latest."""
+        payloads = [
+            self._csv(price=7200.0),
+            self._csv(price=7200.5),
+            self._csv(price=7201.0),
+        ]
+        # Simulate receiver thread: parse and enqueue all three
+        import threading
+        lock = feed._lock
+        for raw in payloads:
+            parsed = feed._parse(raw)
+            assert parsed is not None
+            with lock:
+                feed._queue.append(parsed)
+
+        assert feed.queue_size == 3
+
+    def test_queue_returns_fifo_order(self, feed):
+        """R1 fix: get_latest_blocking must return oldest tick first."""
+        prices = [7200.0, 7200.5, 7201.0]
+        lock = feed._lock
+        for p in prices:
+            parsed = feed._parse(self._csv(price=p))
+            with lock:
+                feed._queue.append(parsed)
+
+        # Drain the queue — must come out in insertion order
+        results = []
+        while feed.queue_size > 0:
+            tick = feed.get_latest_blocking(timeout=0.1)
+            if tick is not None:
+                results.append(tick["price"])
+
+        assert results == prices, f"Expected FIFO {prices}, got {results}"
+
+    def test_queue_bounded_at_maxlen(self, feed):
+        """Queue must not grow beyond maxlen=128 (drops oldest on overflow)."""
+        lock = feed._lock
+        for i in range(200):
+            parsed = feed._parse(self._csv(price=float(7200 + i)))
+            with lock:
+                feed._queue.append(parsed)
+
+        assert feed.queue_size == 128
+
+    def test_get_latest_peeks_without_consuming(self, feed):
+        """get_latest() must peek at most-recent without removing from queue."""
+        payloads = [7200.0, 7201.0, 7202.0]
+        lock = feed._lock
+        for p in payloads:
+            with lock:
+                feed._queue.append({"price": p, "recv_ts": time.time()})
+
+        peeked = feed.get_latest()
+        assert peeked is not None
+        assert peeked["price"] == 7202.0, "get_latest must peek at most recent"
+        assert feed.queue_size == 3, "get_latest must not consume the tick"
 
 
 # ── Full session replay ───────────────────────────────────────────────

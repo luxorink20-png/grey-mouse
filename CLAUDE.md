@@ -374,6 +374,12 @@ Full report: `QA_AUDIT_REPORT.md`
 | `backtest_fidelity.py` — Phase 3 backtest: real metadata → composite quality score → quality_engine | ✅ done 2026-06-02 |
 | **Phase 3 result** (43 sessions, 98 trades, max_bars=2000): **VERDICT: ALPHA** — all 2 rejected trades were losers (100%), WR +0.9pp (41.8→42.7%), PF +0.07 (1.79→1.86), Exp +0.24 (+3.46→+3.70), MaxDD +6.5 pts | ✅ done 2026-06-02 |
 | `reports/quality_engine_effectiveness.md` — full effectiveness report | ✅ done 2026-06-02 |
+| **Bridge Hardening (2026-06-02)** — R1 + R2 infrastructure patch before paper trading | ✅ done 2026-06-02 |
+| `market_feed.py` v1.2 — R1: single-slot `_latest` → `deque(maxlen=128)` FIFO queue (0% tick loss in 30-tick burst vs 97% before) | ✅ done 2026-06-02 |
+| `GibbzBridge.cs` v2.4 — R2: `ToUnixTimeMilliseconds()/1000.0` (ms-precision timestamps in field 10) | ✅ done 2026-06-02 |
+| `market_feed.py` — R2: `recv_ts` field added to every parsed tick; live transport_ms = (recv_ts-timestamp)*1000 | ✅ done 2026-06-02 |
+| **Tests: 202/202 passing** (was 195 before; 7 new reliability tests) | ✅ done 2026-06-02 |
+| `reports/ATAS_BRIDGE_CAPABILITY_AUDIT_V2.md` — post-patch V2 audit (Data Quality 72→78, Reliability 85/100 new) | ✅ done 2026-06-02 |
 
 ---
 

@@ -1,5 +1,5 @@
 // ╔══════════════════════════════════════════════════════════════════╗
-//  GibbzBridge.cs  —  ATAS Indicator → UDP Bridge  v2.3
+//  GibbzBridge.cs  —  ATAS Indicator → UDP Bridge  v2.4
 //
 //  PAYLOAD FORMAT (CSV, posiciones fijas):
 //    0  Close   1  Open   2  High   3  Low   4  Close(dup)
@@ -122,7 +122,10 @@ public class GibbzBridge : Indicator
         decimal delta  = candle.Delta;
         decimal askVol = Math.Max(0m, (candle.Volume + delta) / 2m);
         decimal bidVol = Math.Max(0m, (candle.Volume - delta) / 2m);
-        long    ts     = ((DateTimeOffset)candle.Time).ToUnixTimeSeconds();
+        // R2: millisecond-precision timestamp (v2.4).
+        // Python parser uses float(), so "1744286460.123" is preserved.
+        // Backward-compatible: old Python parser truncates to integer seconds.
+        double  ts     = ((DateTimeOffset)candle.Time).ToUnixTimeMilliseconds() / 1000.0;
         string  symbol = InstrumentInfo?.Instrument ?? "UNKNOWN";
 
         string payload = string.Format(CultureInfo.InvariantCulture,
@@ -391,10 +394,10 @@ public class GibbzBridge : Indicator
             string sym = InstrumentInfo?.Instrument ?? "?";
             string content = string.Format(
                 "ts={0}\nstatus={1}\nbars_sent={2}\nsymbol={3}\nport={4}\nlast_send={5}\n" +
-                "vp_available={6}\n",
+                "vp_available={6}\nbridge_version=2.4\n",
                 DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
                 msg, _barsSent, sym, UdpPort,
-                _lastSend == DateTime.MinValue ? "never" : _lastSend.ToString("HH:mm:ss"),
+                _lastSend == DateTime.MinValue ? "never" : _lastSend.ToString("HH:mm:ss.fff"),
                 !_vpNotAvailable);
             File.WriteAllText(_statusPath, content);
         }
