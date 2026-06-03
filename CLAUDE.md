@@ -369,7 +369,11 @@ Full report: `QA_AUDIT_REPORT.md`
 | `tests/unit/test_confidence_engine.py` — 12 tests | ✅ done 2026-06-02 |
 | **Test count: 195/195 passing** | ✅ done 2026-06-02 |
 | `backtest_fusion.py` — 43-session backtest with confidence sizing + quality proxy | ✅ done 2026-06-02 |
-| **backtest_fusion.py result** (43 sessions, max_bars=2000): MaxDD improved +19.7 pts (-56.8 vs -76.5), avg_loss -5.25 vs -7.54, confidence sizing active. Quality gate uses backtest proxy (live engine uses full ConfluenceEngine score). | ✅ done 2026-06-02 |
+| **Phase 3 — Full-Fidelity Backtest (2026-06-02)** | ✅ done 2026-06-02 |
+| `full_backtest.py` — `rich_meta` param added: captures 10 real pipeline features per signal bar (regime, env, FA/VA80 strength, volume, momentum, R:R, zone) | ✅ done 2026-06-02 |
+| `backtest_fidelity.py` — Phase 3 backtest: real metadata → composite quality score → quality_engine | ✅ done 2026-06-02 |
+| **Phase 3 result** (43 sessions, 98 trades, max_bars=2000): **VERDICT: ALPHA** — all 2 rejected trades were losers (100%), WR +0.9pp (41.8→42.7%), PF +0.07 (1.79→1.86), Exp +0.24 (+3.46→+3.70), MaxDD +6.5 pts | ✅ done 2026-06-02 |
+| `reports/quality_engine_effectiveness.md` — full effectiveness report | ✅ done 2026-06-02 |
 
 ---
 

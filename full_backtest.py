@@ -99,13 +99,18 @@ class Trade:
 def run_session(session_date: str, recording_file: str,
                 max_bars: int, target_cap: float,
                 context_filter=None,
-                session_type: str = "") -> list[BarData]:
+                session_type: str = "",
+                rich_meta: "dict | None" = None) -> list[BarData]:
     """Run the full pipeline on one session and return bars with setup signals.
 
     Optional args:
         context_filter: ContextFilter instance. When provided, sessions of
             filtered type (e.g. VOL_RELEASE) return [] immediately.
         session_type: session classification string from expansion metadata.
+        rich_meta: when provided (empty dict), populated with quality metadata
+            for every signal bar (key = bar_count int).  Used by
+            backtest_fidelity.py to feed real ConfluenceEngine/RiskEngine
+            data into quality_engine.py.  Zero-overhead when None.
     """
     if context_filter is not None and session_type:
         if context_filter.is_session_filtered(session_type):
@@ -284,6 +289,50 @@ def run_session(session_date: str, recording_file: str,
             bd.sstp  = setup_r.stop_pts
             bd.stgt  = setup_r.target_pts
             bars.append(bd)
+
+            # Populate rich quality metadata for signal bars (zero overhead otherwise).
+            # Captures the 10 physical features needed by backtest_fidelity.py:
+            # VA80 strength, FA strength, context score, session quality, location,
+            # momentum, volatility, volume ratio, intent state, real R:R.
+            if (rich_meta is not None
+                    and bd.stype not in ("NO_SETUP", "INSTITUTIONAL_GRADE")):
+                # Rolling volume average stored in dict keyed by sentinel "_avg_vol"
+                _prev_avg  = rich_meta.get("_avg_vol", raw.get("volume", 1) or 1)
+                _cur_vol   = float(raw.get("volume", 0) or 0)
+                _avg_vol   = round(_prev_avg * 0.95 + _cur_vol * 0.05, 2)
+                rich_meta["_avg_vol"] = _avg_vol
+
+                rich_meta[bar_count] = {
+                    # Location / zone (correct — comes from InstitutionalLevels)
+                    "zone":             str(getattr(context,     "zone",           "IN_VALUE_AREA")),
+                    # Session quality
+                    "regime":           str(getattr(regime_r,    "session_regime", "UNKNOWN")),
+                    # Volatility / environment
+                    "environment":      str(getattr(env_r,       "environment",    "ROTATIONAL")),
+                    "env_tradeable":    bool(getattr(env_r,      "tradeable",      True)),
+                    "env_danger":       float(getattr(env_r,     "danger_level",   3.0)),
+                    # FA strength
+                    "fa_state":         str(getattr(fa_r,        "state",          "INACTIVE")),
+                    "fa_bars_outside":  int(getattr(fa_r,        "bars_outside",   0)),
+                    # VA80 strength
+                    "va80_state":       str(getattr(va80_r,      "state",          "INACTIVE")),
+                    "va80_return_bars": int(getattr(va80_r,      "return_bars",    999)),
+                    # Momentum / intent
+                    "event_type":       str(result.get("event",       "NONE")),
+                    "event_confidence": float(result.get("confidence", 0.0)),
+                    "event_momentum":   float(result.get("momentum",   0.0)),
+                    # Volume ratio
+                    "volume":           _cur_vol,
+                    "avg_volume":       _avg_vol,
+                    # Real R:R from RiskEngine (0 if risk rejected the bar)
+                    "risk_reward":      float(risk.risk_reward),
+                    "risk_approved":    bool(risk.approved),
+                    # Setup identity
+                    "stype":            bd.stype,
+                    "direction":        bd.sdir,
+                    # Bar index (for time-of-session proxy)
+                    "bar_count":        bar_count,
+                }
 
     return bars
 
