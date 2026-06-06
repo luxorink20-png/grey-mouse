@@ -1,0 +1,76 @@
+{
+  "original": {
+    "total_sessions": 43,
+    "total_trades": 106,
+    "core_metrics": {
+      "win_rate": 38.7,
+      "expectancy": 2.61,
+      "profit_factor": 1.56,
+      "total_pnl": 277,
+      "avg_win": 18.76,
+      "avg_loss": 7.57
+    },
+    "setups": {
+      "FA_SETUP": {
+        "trades": 89,
+        "win_rate": 37.1,
+        "expectancy": 1.92,
+        "pnl": 171
+      },
+      "VA80_SETUP": {
+        "trades": 17,
+        "win_rate": 47.1,
+        "expectancy": 6.24,
+        "pnl": 106
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "name": "Conservador  (+20% trades, +5% WR, +1 exp)",
+      "global_delta": {
+        "win_rate": 1.2,
+        "expectancy": 0.29,
+        "profit_factor": 0.05,
+        "total_pnl": 38.8
+      },
+      "va80": {
+        "trades": 20,
+        "win_rate": 52.1,
+        "expectancy": 7.24,
+        "pnl": 144.8
+      }
+    },
+    {
+      "name": "Moderado     (+50% trades, +8% WR, +2 exp)",
+      "global_delta": {
+        "win_rate": 2.3,
+        "expectancy": 0.7,
+        "profit_factor": 0.18,
+        "total_pnl": 100.0
+      },
+      "va80": {
+        "trades": 25,
+        "win_rate": 55.1,
+        "expectancy": 8.24,
+        "pnl": 206.0
+      }
+    },
+    {
+      "name": "Agresivo    (+100% trades,+10% WR, +3 exp)",
+      "global_delta": {
+        "win_rate": 3.9,
+        "expectancy": 1.33,
+        "profit_factor": 0.26,
+        "total_pnl": 208.16
+      },
+      "va80": {
+        "trades": 34,
+        "win_rate": 57.1,
+        "expectancy": 9.24,
+        "pnl": 314.16
+      }
+    }
+  ],
+  "recommendation": "MODERADO is best: +50% VA80 trades drives meaningful PF/WR improvement without AGRESIVO overfitting risk"
+}

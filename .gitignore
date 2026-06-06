@@ -19,8 +19,14 @@ simulation/fragments/
 
 # ── Temp / scratch files ───────────────────────────────────────────
 tmp/
+_tmp/
 tmp_*.txt
 _*.mp3
+*.json.bak
+
+# ── Research artifacts (opt-in: commit explicitly with disclaimer) ──
+# research/ is tracked — files inside must be committed manually.
+# Do not auto-include raw optimization outputs here.
 
 # ── Python artifacts ───────────────────────────────────────────────
 __pycache__/
