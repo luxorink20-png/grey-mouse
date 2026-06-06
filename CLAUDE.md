@@ -384,6 +384,13 @@ Full report: `QA_AUDIT_REPORT.md`
 | `reports/BRIDGE_HARDENING_IMPACT_REPORT.md` — V1 vs V2 comparative: tick loss 97%→0%, timestamp 1s→1ms, scores table | ✅ done 2026-06-02 |
 | `reports/PRE_PAPER_TRADING_FINAL_AUDIT.md` — final readiness audit: READY, Semi-Quant classification, paper checklist | ✅ done 2026-06-02 |
 | **202/202 tests confirmed passing** — full suite run post-hardening; 0 regressions | ✅ done 2026-06-02 |
+| **Post-Hardening Backlog Audit (2026-06-06)** — Epics 1–4 implemented | ✅ done 2026-06-06 |
+| **Epic 1**: Wire 5 missing context engines in live `engine.py`; fix pipeline order; 15 gate tests | ✅ done 2026-06-06 |
+| **Epic 2**: `size_unit="multiplier"` field on RiskResult + FeedbackEngine CSV propagation | ✅ done 2026-06-06 |
+| **Epic 3**: Optimization JSONs → `research/optimization/`; README + .gitignore; delete stale .bak | ✅ done 2026-06-06 |
+| **Epic 4**: `breakeven_ticks=4` constructor param (1.0 pt, was 0.25 pt hardcoded); CANCELLED guard for entry_price=0 | ✅ done 2026-06-06 |
+| `tests/unit/test_feedback_engine.py` — 18 tests (breakeven threshold × 6, CANCELLED × 5, lifecycle × 7) | ✅ done 2026-06-06 |
+| **Test count: 235/235 passing** | ✅ done 2026-06-06 |
 
 ---
 
@@ -398,6 +405,8 @@ Full report: `QA_AUDIT_REPORT.md`
 7. `config.py` is the single source of truth for feature flags and connection config — do not re-declare these constants in other modules.
 8. `ContextFilter` has two independent layers: `is_session_filtered()` (backtest + live) filters entire sessions by type; `should_skip()` (live engine only) filters individual bars by ATR/volume. Only layer 1 affects backtest results. Changing bar-level thresholds has zero effect on backtest trade count.
 9. **Wave 1 (2026-06-02)**: `QualityEngine` (threshold=62) and `ConfidenceEngine` are wired in `engine.py` between `risk_result.approved` check and `feedback.open_trade()`. Quality gate rejects low-scoring setups (score < 62); confidence multiplier (0.5x–1.0x) scales position_size. Both are live-only — `backtest_engine.py` is unaffected. `ConfidenceEngine.register_outcome()` must be called on every closed trade.
+10. **FeedbackEngine breakeven (2026-06-06)**: `breakeven_ticks` is a constructor parameter (default=4). Do not reinstate the class-level constant `BREAKEVEN_TICKS=1`. The threshold is 4 ticks = 1.0 pt to prevent premature BREAKEVEN exits on ES/NQ (spread 1-2 ticks + slippage margin).
+11. **FeedbackEngine CANCELLED (2026-06-06)**: A trade force-closed before receiving any `update()` call (entry_price=0.0) must be classified as `CANCELLED`, not TIMEOUT. This prevents 0.0-price PnL noise in outcome metrics. CANCELLED is logged at WARNING level and counts in the `timeouts` summary accumulator.
 
 ---
 

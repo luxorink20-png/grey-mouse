@@ -238,3 +238,31 @@ Applied 17 improvements across 7 modules (all tests: 166/166 passing).
   - Slippage calculado en `update()` en el primer tick: `abs(entry - signal) / tick`
   - CSV ahora incluye columna `slippage_ticks` (0.0 en paper trading = ejecucion perfecta asumida)
   - CSVs historicos sin la columna: checklist muestra N/A (backward compatible)
+
+---
+
+## Backlog Audit Findings — Post-Hardening (2026-06-06)
+
+### Epic 1 — Live/Backtest Parity ✅ 2026-06-06
+- [x] **[A1-1.1]** Wire 5 missing context engines in `engine.py` live loop
+  (ConfirmationEngine, ContinuationEngine, SessionRegimeEngine, AdaptiveContinuationEngine, PocAcceptanceEngine)
+- [x] **[A1-1.2]** Fix pipeline order: _env_r + _regime_r computed before confluence (was after risk)
+  Fix neutral ConfluenceResult placeholder for microstructure (circular dependency)
+  Pass full context to confluence.evaluate() and validator.validate()
+- [x] **[A1-1.3]** Create `tests/integration/test_live_validator_gates.py` — 15 tests covering all 5 validator gates
+
+### Epic 2 — Position Risk Contract ✅ 2026-06-06
+- [x] **[A2-2.1]** Add `size_unit="multiplier"` field to RiskResult; update __str__ and entry_log
+- [x] **[A2-2.2]** Propagate size_unit to TradeRecord + FeedbackEngine CSV
+
+### Epic 3 — Research Hygiene ✅ 2026-06-06
+- [x] **[A3-3.1]** Move optimization JSONs to research/optimization/ with README + .gitignore update
+  Delete stale levels.json.bak
+
+### Epic 4 — Feedback Accuracy ✅ 2026-06-06
+- [x] **[A4-4.1]** `breakeven_ticks` → constructor parameter in FeedbackEngine (default=4 ticks = 1.0 pt)
+  Rationale: ES/NQ spread 1-2 ticks; 4 ticks prevents mis-classifying potential winners as BREAKEVEN
+- [x] **[A4-4.2]** Guard force-close when entry_price=0.0 → CANCELLED result (was TIMEOUT with 0.0 PnL noise)
+  Added: _log.warning; CANCELLED counts in timeouts for summary; result field documented
+- [x] **[A4-tests]** `tests/unit/test_feedback_engine.py` — 18 tests (Story 4.1 × 6, Story 4.2 × 5, lifecycle × 7)
+  **Test count: 235/235 passing**

@@ -64,7 +64,7 @@ class TradeRecord:
     size_unit:      str   = "multiplier"
 
     # Outcome
-    result:         str   = "PENDING"  # PENDING/WIN/LOSS/BREAKEVEN/TIMEOUT
+    result:         str   = "PENDING"  # PENDING/WIN/LOSS/BREAKEVEN/TIMEOUT/CANCELLED
     exit_price:     float = 0.0
     pnl_pts:        float = 0.0
     hit_target_1:   bool  = False
@@ -126,16 +126,20 @@ class FeedbackEngine:
 
     MAX_BARS_HELD   = 30    # auto-close after N bars (timeout)
     TRAP_BARS       = 3     # bars to detect fast reversal = trap
-    BREAKEVEN_TICKS = 1     # within 1 tick of entry = breakeven
+    # 4 ticks = 1.0 pt: accounts for ES/NQ spread (1-2 ticks) + slippage without
+    # premature breakeven exits that mis-classify potential winners.
+    BREAKEVEN_TICKS = 4
 
     def __init__(self,
-                 log_dir:  str  = "logs",
-                 enabled:  bool = True,
-                 tick:     float = 0.25):
-        self._log_dir    = log_dir
-        self._enabled    = enabled
-        self._tick       = tick
-        self._counter    = 0
+                 log_dir:          str   = "logs",
+                 enabled:          bool  = True,
+                 tick:             float = 0.25,
+                 breakeven_ticks:  int   = 4):
+        self._log_dir         = log_dir
+        self._enabled         = enabled
+        self._tick            = tick
+        self._breakeven_ticks = breakeven_ticks
+        self._counter         = 0
         self._pending:   Optional[TradeRecord] = None
         self._history:   deque = deque(maxlen=100)
         self._filepath   = ""
@@ -177,17 +181,29 @@ class FeedbackEngine:
         if self._pending is not None:
             tr = self._pending
             tr.close_time = datetime.now().strftime("%H:%M:%S")
-            if tr.hit_target_1 or tr.follow_through:
+            # Guard: entry_price=0 means update() was never called (signal fired but
+            # no tick arrived). PnL is undefined — cancel rather than record 0.0 noise.
+            if tr.entry_price == 0.0:
+                tr.result = "CANCELLED"
+                _log.warning(
+                    "force-close trade #%d with entry_price=0.0 — "
+                    "classified as CANCELLED (no tick received after open)",
+                    tr.trade_id
+                )
+                self._close_trade(tr)
+            elif tr.hit_target_1 or tr.follow_through:
                 tr.result     = "WIN"
                 tr.exit_price = tr.target_1
                 tr.pnl_pts    = abs(tr.target_1 - tr.entry_price)
+                self._close_trade(tr)
             elif tr.hit_stop:
                 tr.result     = "LOSS"
                 tr.exit_price = tr.stop
                 tr.pnl_pts    = -(tr.risk_pts)
+                self._close_trade(tr)
             else:
                 tr.result = "TIMEOUT"
-            self._close_trade(tr)
+                self._close_trade(tr)
 
         self._counter += 1
 
@@ -287,7 +303,7 @@ class FeedbackEngine:
 
         # ── BREAKEVEN CHECK ────────────────────────────────────────
         be_dist = abs(price - tr.entry_price)
-        if be_dist <= self._tick * self.BREAKEVEN_TICKS and tr.bars_held > 5:
+        if be_dist <= self._tick * self._breakeven_ticks and tr.bars_held > 5:
             tr.exit_price = price
             tr.pnl_pts    = 0.0
             tr.result     = "BREAKEVEN"
@@ -326,7 +342,7 @@ class FeedbackEngine:
             self._score_loss.append(tr.confluence_score)
         elif tr.result == "BREAKEVEN":
             self._breakevens += 1
-        elif tr.result == "TIMEOUT":
+        elif tr.result in ("TIMEOUT", "CANCELLED"):
             self._timeouts += 1
 
         if tr.was_trap:
