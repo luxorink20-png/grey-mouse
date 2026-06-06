@@ -62,6 +62,8 @@ class TradeRecord:
     signal_price:   float = 0.0
     # Multiplier applied to base contract size (0.25x–2.0x). See RiskResult.size_unit.
     size_unit:      str   = "multiplier"
+    # Setup type from SetupRouter (e.g. VA80_LONG, FA_SHORT, CONFLUENCE, NO_SETUP)
+    setup_type:     str   = "CONFLUENCE"
 
     # Outcome
     result:         str   = "PENDING"  # PENDING/WIN/LOSS/BREAKEVEN/TIMEOUT/CANCELLED
@@ -166,11 +168,13 @@ class FeedbackEngine:
                    analysis,
                    narrative,
                    session_name:  str   = "",
-                   signal_price:  float = 0.0) -> None:
+                   signal_price:  float = 0.0,
+                   setup_type:    str   = "CONFLUENCE") -> None:
         """
         Register a new approved setup for tracking.
         Only one pending trade at a time — new one replaces old.
         signal_price: bar price when the signal fired (for slippage calc).
+        setup_type: SetupRouter signal_type label (e.g. VA80_LONG, FA_SHORT).
         """
         if not risk_result.approved:
             return
@@ -226,6 +230,7 @@ class FeedbackEngine:
             narrative         = getattr(narrative, "narrative",    ""),
             intent_conviction = getattr(narrative, "conviction",   0),
             session           = session_name,
+            setup_type        = setup_type or "CONFLUENCE",
         )
 
     # ──────────────────────────────────────────────────────────────
@@ -434,7 +439,7 @@ class FeedbackEngine:
                 "was_trap", "follow_through",
                 "confluence_score", "zone", "event",
                 "narrative", "conviction", "rr", "session",
-                "slippage_ticks", "position_size", "size_unit",
+                "slippage_ticks", "position_size", "size_unit", "setup_type",
             ]
             with open(self._filepath, "w", newline="", encoding="utf-8") as f:
                 csv.writer(f).writerow(headers)
@@ -456,7 +461,7 @@ class FeedbackEngine:
             tr.confluence_score, tr.zone, tr.event,
             tr.narrative, tr.intent_conviction,
             tr.risk_reward, tr.session,
-            tr.slippage_ticks, tr.position_size, tr.size_unit,
+            tr.slippage_ticks, tr.position_size, tr.size_unit, tr.setup_type,
         ]
         try:
             with open(self._filepath, "a", newline="", encoding="utf-8") as f:

@@ -266,3 +266,19 @@ Applied 17 improvements across 7 modules (all tests: 166/166 passing).
   Added: _log.warning; CANCELLED counts in timeouts for summary; result field documented
 - [x] **[A4-tests]** `tests/unit/test_feedback_engine.py` — 18 tests (Story 4.1 × 6, Story 4.2 × 5, lifecycle × 7)
   **Test count: 235/235 passing**
+
+### Epic 5 — Concentration Monitor ✅ 2026-06-06
+- [x] **[A5-5.1]** `concentration_monitor.py` — per-setup PF tracking (VA80, FA, CONFLUENCE, any router signal)
+  - `ConcentrationMonitor(min_trades=5, pf_floor=1.0, window=20, cooldown_trades=10)`
+  - `set_pending(setup_type)` called at trade open; `register_close()` at trade close
+  - Rolling PF over last `window` trades; degradation = PF < pf_floor after min_trades
+  - Cooldown prevents duplicate alerts within `cooldown_trades` trades per setup
+- [x] **[A5-5.2]** CRITICAL label for VA80/FA setups (high concentration risk from audit: VA80=38% PnL)
+  WARNING label for all other setups
+- [x] **[A5-5.3]** `TradeRecord.setup_type` field added + `open_trade(setup_type=)` kwarg
+  CSV column `setup_type` added (non-breaking, appended)
+- [x] **[A5-engine]** `engine.py` wired: ConcentrationMonitor imported; `set_pending()` on trade open;
+  `register_close()` on closed_trade; `voice.say(alert.message, priority=8)` on degradation
+- [x] **[A5-tests]** `tests/unit/test_concentration_monitor.py` — 19 tests
+  (per-setup × 3, degradation × 6, cooldown × 2, high-conc × 3, summary × 5)
+  **Test count: 254/254 passing**

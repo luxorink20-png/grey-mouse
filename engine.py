@@ -39,6 +39,7 @@ from config import (
 from context_filter import ContextFilter
 from quality_engine import QualityEngine
 from confidence_engine import ConfidenceEngine
+from concentration_monitor import ConcentrationMonitor
 from log_config import get_logger as _get_logger
 _cf_log = _get_logger("context_filter.engine")
 
@@ -119,6 +120,7 @@ setup_router    = SetupRouter()
 _context_filter  = ContextFilter()
 _quality_engine  = QualityEngine(threshold=62)
 _confidence_eng  = ConfidenceEngine()
+_conc_monitor    = ConcentrationMonitor(min_trades=5, pf_floor=1.0, window=20, cooldown_trades=10)
 
 feed = MarketFeed(host=UDP_HOST, port=UDP_PORT) if USE_REAL_FEED else None
 
@@ -361,12 +363,17 @@ def run_engine():
                             _cf_reason, setup_r.signal_type, raw["price"],
                         )
                     else:
+                        _trade_setup = setup_r.signal_type \
+                            if setup_r.signal_type != "NO_SETUP" \
+                            else "CONFLUENCE"
+                        _conc_monitor.set_pending(_trade_setup)
                         feedback.open_trade(
                             risk_result  = risk_result,
                             analysis     = analysis,
                             narrative    = narrative,
                             session_name = session_name,
                             signal_price = raw["price"],
+                            setup_type   = _trade_setup,
                         )
 
             closed_trade = feedback.update(raw["price"])
@@ -385,6 +392,13 @@ def run_engine():
                     win     = tr_result == "WIN",
                     pnl_pts = tr_pnl,
                 )
+                # Epic 5: concentration degradation check
+                _degrad = _conc_monitor.register_close(
+                    pnl_pts = tr_pnl,
+                    win     = tr_result == "WIN",
+                )
+                if _degrad is not None:
+                    voice.say(_degrad.message, priority=8)
                 tr_score  = getattr(closed_trade, "score",     0)
                 tr_zone   = getattr(closed_trade, "zone",      zone_key)
                 tr_narr   = getattr(closed_trade, "narrative", narr_key)

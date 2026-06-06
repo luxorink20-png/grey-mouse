@@ -391,6 +391,11 @@ Full report: `QA_AUDIT_REPORT.md`
 | **Epic 4**: `breakeven_ticks=4` constructor param (1.0 pt, was 0.25 pt hardcoded); CANCELLED guard for entry_price=0 | ✅ done 2026-06-06 |
 | `tests/unit/test_feedback_engine.py` — 18 tests (breakeven threshold × 6, CANCELLED × 5, lifecycle × 7) | ✅ done 2026-06-06 |
 | **Test count: 235/235 passing** | ✅ done 2026-06-06 |
+| **Epic 5**: `concentration_monitor.py` — per-setup PF tracking + degradation voice alerts (VA80/FA=CRITICAL, others=WARNING) | ✅ done 2026-06-06 |
+| `TradeRecord.setup_type` field + `open_trade(setup_type=)` kwarg + CSV column | ✅ done 2026-06-06 |
+| `engine.py` wired: `set_pending()` on trade open, `register_close()` on close, `voice.say()` on degradation | ✅ done 2026-06-06 |
+| `tests/unit/test_concentration_monitor.py` — 19 tests | ✅ done 2026-06-06 |
+| **Test count: 254/254 passing** | ✅ done 2026-06-06 |
 
 ---
 
@@ -407,6 +412,7 @@ Full report: `QA_AUDIT_REPORT.md`
 9. **Wave 1 (2026-06-02)**: `QualityEngine` (threshold=62) and `ConfidenceEngine` are wired in `engine.py` between `risk_result.approved` check and `feedback.open_trade()`. Quality gate rejects low-scoring setups (score < 62); confidence multiplier (0.5x–1.0x) scales position_size. Both are live-only — `backtest_engine.py` is unaffected. `ConfidenceEngine.register_outcome()` must be called on every closed trade.
 10. **FeedbackEngine breakeven (2026-06-06)**: `breakeven_ticks` is a constructor parameter (default=4). Do not reinstate the class-level constant `BREAKEVEN_TICKS=1`. The threshold is 4 ticks = 1.0 pt to prevent premature BREAKEVEN exits on ES/NQ (spread 1-2 ticks + slippage margin).
 11. **FeedbackEngine CANCELLED (2026-06-06)**: A trade force-closed before receiving any `update()` call (entry_price=0.0) must be classified as `CANCELLED`, not TIMEOUT. This prevents 0.0-price PnL noise in outcome metrics. CANCELLED is logged at WARNING level and counts in the `timeouts` summary accumulator.
+12. **ConcentrationMonitor (2026-06-06)**: `set_pending()` must be called immediately before `feedback.open_trade()` — not before the quality/context gate checks. Calling it when a trade is filtered out (quality skip, context skip) would tag the NEXT trade with a wrong setup type. The guard is: only call `set_pending()` in the `else` branch after all skip checks pass.
 
 ---
 
