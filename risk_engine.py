@@ -18,22 +18,27 @@ from dataclasses import dataclass, field
 @dataclass
 class RiskResult:
     approved:       bool
+    # Multiplier applied to the base contract size configured in the broker/launcher.
+    # Range: 0.25x (minimum) → 2.0x (institutional grade).
+    # 0.25 = quarter size, 1.0 = full base size, 2.0 = double base size.
+    # The broker/launcher translates this multiplier to actual contracts.
     position_size:  float
-    stop:           float
-    target_1:       float
-    target_2:       float
-    risk_reward:    float
-    direction:      str
-    risk_pts:       float
-    reward_pts:     float
-    reason:         str
-    reason_detail:  dict = field(default_factory=dict)
+    size_unit:      str   = "multiplier"   # always "multiplier" — see docstring above
+    stop:           float = 0.0
+    target_1:       float = 0.0
+    target_2:       float = 0.0
+    risk_reward:    float = 0.0
+    direction:      str   = "NONE"
+    risk_pts:       float = 0.0
+    reward_pts:     float = 0.0
+    reason:         str   = ""
+    reason_detail:  dict  = field(default_factory=dict)
 
     def __str__(self) -> str:
         status = "APPROVED" if self.approved else "REJECTED"
         return (
             status + " | " + self.direction +
-            " | size=" + str(self.position_size) + "%" +
+            " | size=" + str(self.position_size) + "x" +
             " | stop=" + str(round(self.stop, 2)) +
             " | T1=" + str(round(self.target_1, 2)) +
             " | R:R=" + str(round(self.risk_reward, 2))
@@ -50,7 +55,7 @@ class RiskResult:
             f"  Narrativa : {d.get('narrative','?')} ({d.get('conviction','?')}%)\n"
             f"  Confirmación: {d.get('confirmation','?')}\n"
             f"  Stop={self.stop} | T1={self.target_1} | R:R={self.risk_reward}\n"
-            f"  Size={self.position_size}%"
+            f"  Size={self.position_size}x (multiplier)"
         )
 
 

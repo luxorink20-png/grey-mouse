@@ -60,6 +60,8 @@ class TradeRecord:
 
     # Signal price (bar price when trade was approved)
     signal_price:   float = 0.0
+    # Multiplier applied to base contract size (0.25x–2.0x). See RiskResult.size_unit.
+    size_unit:      str   = "multiplier"
 
     # Outcome
     result:         str   = "PENDING"  # PENDING/WIN/LOSS/BREAKEVEN/TIMEOUT
@@ -196,6 +198,7 @@ class FeedbackEngine:
             signal_price      = signal_price,
             direction         = risk_result.direction,
             position_size     = risk_result.position_size,
+            size_unit         = getattr(risk_result, "size_unit", "multiplier"),
             stop              = risk_result.stop,
             target_1          = risk_result.target_1,
             target_2          = risk_result.target_2,
@@ -415,7 +418,7 @@ class FeedbackEngine:
                 "was_trap", "follow_through",
                 "confluence_score", "zone", "event",
                 "narrative", "conviction", "rr", "session",
-                "slippage_ticks",
+                "slippage_ticks", "position_size", "size_unit",
             ]
             with open(self._filepath, "w", newline="", encoding="utf-8") as f:
                 csv.writer(f).writerow(headers)
@@ -437,7 +440,7 @@ class FeedbackEngine:
             tr.confluence_score, tr.zone, tr.event,
             tr.narrative, tr.intent_conviction,
             tr.risk_reward, tr.session,
-            tr.slippage_ticks,
+            tr.slippage_ticks, tr.position_size, tr.size_unit,
         ]
         try:
             with open(self._filepath, "a", newline="", encoding="utf-8") as f:
