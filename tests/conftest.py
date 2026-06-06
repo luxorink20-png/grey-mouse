@@ -113,6 +113,74 @@ def mock_level_context():
     return _MockLevelContext
 
 
+# ── Validator context mocks (live-path gates) ─────────────────────────
+
+class _MockSessionRegime:
+    def __init__(self, regime="BALANCED_DAY"):
+        self.session_regime             = regime
+        self.regime_confidence          = 60
+        self.trend_strength             = 40
+        self.volatility_state           = "NORMAL"
+        self.continuation_probability   = 50
+        self.mean_reversion_probability = 50
+
+    def is_range_regime(self):
+        return self.session_regime in (
+            "BALANCED_DAY", "ROTATIONAL_DAY", "LOW_VOL_DAY", "TRAPPED_DAY"
+        )
+
+
+class _MockConfirmationResult:
+    def __init__(self, breakout_type="MODERATE", acceptance_type="EXPANSION",
+                 confirmation_score=70, structure_bias="NEUTRAL"):
+        self.breakout_type        = breakout_type
+        self.acceptance_type      = acceptance_type
+        self.confirmation_score   = confirmation_score
+        self.structure_bias       = structure_bias
+        self.confirmed            = True
+
+
+class _MockMarketEnv:
+    def __init__(self, environment="ROTATIONAL", tradeable=True,
+                 trap_density=0, breakout_failure_rate=0,
+                 directional_efficiency=60, danger_level=0):
+        self.environment             = environment
+        self.tradeable               = tradeable
+        self.trap_density            = trap_density
+        self.breakout_failure_rate   = breakout_failure_rate
+        self.directional_efficiency  = directional_efficiency
+        self.danger_level            = danger_level
+        self.confidence              = 60
+        self.rotation_factor         = 0
+
+
+class _MockContinuationResult:
+    def __init__(self, quality="MODERATE", probability=75, risk=30):
+        self.continuation_quality      = quality
+        self.continuation_probability  = probability
+        self.continuation_risk         = risk
+
+
+@pytest.fixture
+def make_session_regime():
+    return _MockSessionRegime
+
+
+@pytest.fixture
+def make_confirmation():
+    return _MockConfirmationResult
+
+
+@pytest.fixture
+def make_market_env():
+    return _MockMarketEnv
+
+
+@pytest.fixture
+def make_continuation():
+    return _MockContinuationResult
+
+
 # ── Warmed-up EventEngine ─────────────────────────────────────────────
 
 @pytest.fixture

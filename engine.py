@@ -22,6 +22,11 @@ from adaptive_layer       import AdaptiveLayer
 from learning_engine      import LearningEngine
 from bar_aggregator       import BarAggregator
 from market_environment   import MarketEnvironmentAnalyzer
+from confirmation_engine  import ConfirmationEngine
+from continuation_engine  import ContinuationEngine
+from session_regime_engine import SessionRegimeEngine
+from adaptive_continuation import AdaptiveContinuationEngine
+from poc_acceptance        import PocAcceptanceEngine
 from gibbz_vwap           import VWAPEngine
 from gibbz_failed_auction import FADetector
 from gibbz_va_rule80      import VA80Detector
@@ -102,6 +107,11 @@ learning      = LearningEngine(log_dir="logs")
 aggregator    = BarAggregator(mode="TIME", seconds=5)
 
 _market_env_rtr = MarketEnvironmentAnalyzer(tick=0.25)
+_confirmation   = ConfirmationEngine(window=20, tick=0.25)
+_continuation   = ContinuationEngine(window=12, tick=0.25)
+_sess_regime    = SessionRegimeEngine(tick=0.25)
+_adaptive_cont  = AdaptiveContinuationEngine(tick=0.25)
+_poc_engine     = PocAcceptanceEngine(vah=VAH, poc=POC, val=VAL, tick=0.25)
 _vwap_eng_rtr   = VWAPEngine()
 _fa_det_rtr     = FADetector(vah=VAH, val=VAL)
 _va80_det_rtr   = VA80Detector(vah=VAH, val=VAL, open_price=OPEN_PRICE)
@@ -233,20 +243,51 @@ def run_engine():
                     voice.on_session_end()
                 last_session = session_name
 
-            if session_active:
-                analysis = confluence.evaluate(result, context)
-            else:
-                analysis = dead_zone_analysis(result, context, session_name)
+            # ── Context engines — must run before confluence + validator ──
+            _regime_r = _sess_regime.update(raw, result)
+            _env_r    = _market_env_rtr.analyze_environment(raw, result)
 
+            # Microstructure uses a neutral placeholder (analysis not yet computed)
+            _mp = ConfluenceResult(
+                event="NONE", zone=context.zone, confluence="",
+                bias="NEUTRAL", score=50, classification="MEDIUM QUALITY",
+                action="OBSERVE", reason="", hpz_bonus=False,
+                bias_aligned=False, consecutive=0,
+            )
             micro_result = microstructure.analyze(
                 event_result  = result,
                 level_context = context,
-                confluence    = analysis,
+                confluence    = _mp,
                 raw_data      = raw,
             )
 
+            _conf_r = _confirmation.analyze(result, context, None, micro_result, raw)
+            # Inject env + zone into raw so continuation_engine v1.2 override works
+            raw["env"]  = getattr(_env_r, "environment", "ROTATIONAL")
+            raw["zone"] = context.zone
+            _cont_r = _continuation.analyze(result, _conf_r, _regime_r, raw)
+            _ac_r   = _adaptive_cont.analyze_continuation(
+                result, _conf_r, _regime_r, _env_r, raw
+            )
+            _poc_r  = _poc_engine.analyze(raw, result, _conf_r)
+
             if session_active:
-                validation = validator.validate(analysis, result, raw)
+                analysis = confluence.evaluate(
+                    result, context,
+                    confirmation=_conf_r, session_regime=_regime_r,
+                    continuation=_cont_r, adaptive_continuation=_ac_r,
+                    market_env=_env_r, poc_acceptance=_poc_r,
+                )
+            else:
+                analysis = dead_zone_analysis(result, context, session_name)
+
+            if session_active:
+                validation = validator.validate(
+                    analysis, result, raw,
+                    confirmation=_conf_r, session_regime=_regime_r,
+                    continuation=_cont_r, adaptive_continuation=_ac_r,
+                    market_env=_env_r, poc_acceptance=_poc_r,
+                )
             else:
                 validation = ValidationResult(
                     validated=False, adjusted_score=0, original_score=0,
@@ -277,7 +318,6 @@ def run_engine():
             )
 
             _router_bar += 1
-            _env_r  = _market_env_rtr.analyze_environment(raw, result)
             _vwap_r = _vwap_eng_rtr.update(raw)
             _fa_r   = _fa_det_rtr.update(raw["price"], raw.get("delta", 0))
             _va80_r = _va80_det_rtr.update(raw["price"])
