@@ -420,6 +420,26 @@ Full report: `QA_AUDIT_REPORT.md`
 11. **FeedbackEngine CANCELLED (2026-06-06)**: A trade force-closed before receiving any `update()` call (entry_price=0.0) must be classified as `CANCELLED`, not TIMEOUT. This prevents 0.0-price PnL noise in outcome metrics. CANCELLED is logged at WARNING level and counts in the `timeouts` summary accumulator.
 12. **ConcentrationMonitor (2026-06-06)**: `set_pending()` must be called immediately before `feedback.open_trade()` — not before the quality/context gate checks. Calling it when a trade is filtered out (quality skip, context skip) would tag the NEXT trade with a wrong setup type. The guard is: only call `set_pending()` in the `else` branch after all skip checks pass.
 
+### BREAKEVEN — Diseño Intencional (2026-06-06)
+
+Cuando un trade dispara BREAKEVEN (`feedback_engine.py`):
+
+```python
+tr.exit_price = price   # precio real de mercado al momento del cierre
+tr.pnl_pts    = 0.0     # SIEMPRE 0.0 — por diseño, no por bug
+tr.result     = "BREAKEVEN"
+```
+
+**Rationale:** Spread ES/NQ = 1 tick + slippage estimado 0.5–1.5 ticks ≈ 0.25–1.0 pt de costo de microestructura. BREAKEVEN absorbe este costo implícitamente. No es pérdida registrada ni ganancia — es "salida de ruido".
+
+**Banda actual:** `breakeven_ticks=4` (1.0 pt). Un trade dentro de 1.0 pt del entry después de 5+ barras cierra como BREAKEVEN con pnl=0.0, aunque el mark-to-market real sea ±0.75 pt.
+
+**Impacto en ConcentrationMonitor:** BREAKEVEN llega como `(pnl_pts=0.0, win=False)`. Incrementa `stats.total` pero no afecta `gross_win` ni `gross_loss` (PF math intacto). Con banda de 4 ticks, setups con chop frecuente (VA80 en BALANCED_DAY) pueden alcanzar `min_trades` antes de tener señal PF significativa.
+
+**Wave 2 (pendiente):** Considerar campo `theoretical_pnl = abs(exit_price - entry_price)` para análisis post-trade, manteniendo `pnl_pts=0.0` para cálculos de riesgo reales.
+
+**Invariante:** No cambiar `pnl_pts` de BREAKEVEN a un valor real sin revisar ConcentrationMonitor, FeedbackSummary, y la lógica del paper trading checklist que asume 0.0 como resultado neutro.
+
 ---
 
 ## 12. Git & Version Control

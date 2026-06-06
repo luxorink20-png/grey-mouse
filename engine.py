@@ -393,12 +393,15 @@ def run_engine():
                     pnl_pts = tr_pnl,
                 )
                 # Epic 5: concentration degradation check
-                _degrad = _conc_monitor.register_close(
-                    pnl_pts = tr_pnl,
-                    win     = tr_result == "WIN",
-                )
-                if _degrad is not None:
-                    voice.say(_degrad.message, priority=8)
+                try:
+                    _degrad = _conc_monitor.register_close(
+                        pnl_pts = tr_pnl,
+                        win     = tr_result == "WIN",
+                    )
+                    if _degrad is not None:
+                        voice.say(_degrad.message, priority=8)
+                except Exception as _e:
+                    _cf_log.error("concentration_monitor.register_close failed: %s", _e)
                 tr_score  = getattr(closed_trade, "score",     0)
                 tr_zone   = getattr(closed_trade, "zone",      zone_key)
                 tr_narr   = getattr(closed_trade, "narrative", narr_key)
