@@ -80,7 +80,6 @@ class ContextFilter:
 
         self._atr_history  = deque(maxlen=atr_window)
         self._vol_history  = deque(maxlen=vol_window)
-        self._act_history  = deque(maxlen=vol_window)  # bar-level trades count
 
         # Regime tracking
         self._recent_trades: deque[tuple[float, bool]] = deque(maxlen=10)
@@ -107,14 +106,11 @@ class ContextFilter:
         low  = bar.get("low",  bar.get("price", 0.0))
         atr  = max(high - low, 0.0)
         vol  = bar.get("volume", 0.0)
-        act  = float(bar.get("trades", 0))
 
         if atr > 0:
             self._atr_history.append(atr)
         if vol > 0:
             self._vol_history.append(vol)
-        if act > 0:                          # exclude zeros — bridge sends 0 always
-            self._act_history.append(act)
 
     def register_trade(self, pnl: float, win: bool) -> None:
         """

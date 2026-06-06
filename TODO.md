@@ -282,3 +282,14 @@ Applied 17 improvements across 7 modules (all tests: 166/166 passing).
 - [x] **[A5-tests]** `tests/unit/test_concentration_monitor.py` — 19 tests
   (per-setup × 3, degradation × 6, cooldown × 2, high-conc × 3, summary × 5)
   **Test count: 254/254 passing**
+
+### Epic 6 — Engine Honesty ✅ 2026-06-06
+- [x] **[A6-6.1]** Remove `_act_history` dead code from `context_filter.py`
+  (deque init + `act` variable + append removed — activity check was already removed in prior audit;
+  bridge always sends trades=0 making criterion permanently False)
+- [x] **[A6-6.2]** Remove discarded `learning.get_adjustment()` call in `run_replay.py` (return value was not used)
+  Add observer role docstring to `LearningEngine`: explicitly documents that get_adjustment() is
+  available but NOT wired into live confluence/validator (deferred to Wave 2/3)
+- [x] **[A6-6.3]** `ConfidenceEngine.__init__(cold_start_score: float = 0.5)` — configurable cold-start score
+  Default 0.5 → 0.75x multiplier. Set lower for more conservative paper trading start.
+  **Test count: 254/254 passing (no new tests needed — existing 12 tests cover cold-start path)**

@@ -188,7 +188,6 @@ def run_session(session_date: str, recording_path: str) -> dict:
             event_key = result.get("event", "NONE")
             zone_key  = getattr(context,   "zone",      "UNKNOWN")
             narr_key  = getattr(narrative, "narrative", "UNCLEAR")
-            learning.get_adjustment(event_key, zone_key, narr_key)
 
             risk_result = risk.analyze(
                 price=raw["price"], confluence=analysis,

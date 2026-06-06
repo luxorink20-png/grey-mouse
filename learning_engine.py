@@ -32,10 +32,17 @@ class LearningAdjustment:
 
 class LearningEngine:
     """
-    Motor de aprendizaje adaptativo v2.0
+    Motor de aprendizaje adaptativo v2.0 — OBSERVER ROLE
 
     Registra trades y aprende qué combinaciones funcionan.
     No modifica pesos hasta tener 30 muestras por setup.
+
+    Observer contract:
+      - register() is called on every closed trade (engine.py, replay_feed.py)
+      - get_adjustment() returns a score delta (±10 pts max) once ≥30 samples
+      - The adjustment is NOT currently wired into confluence/validator in the
+        live engine — it is available for future integration (Wave 2/3).
+      - force_analyze() prints a summary report on session shutdown.
     """
 
     MIN_SAMPLES        = 30    # era 20

@@ -396,6 +396,12 @@ Full report: `QA_AUDIT_REPORT.md`
 | `engine.py` wired: `set_pending()` on trade open, `register_close()` on close, `voice.say()` on degradation | ✅ done 2026-06-06 |
 | `tests/unit/test_concentration_monitor.py` — 19 tests | ✅ done 2026-06-06 |
 | **Test count: 254/254 passing** | ✅ done 2026-06-06 |
+| **Epic 6**: engine honesty — dead code removed, LearningEngine documented as observer, ConfidenceEngine cold-start configurable | ✅ done 2026-06-06 |
+| `context_filter.py` — `_act_history` deque + `act` variable removed (was never read; bridge sends trades=0) | ✅ done 2026-06-06 |
+| `run_replay.py` — dead `learning.get_adjustment()` call removed (return value was discarded) | ✅ done 2026-06-06 |
+| `learning_engine.py` — observer role documented: get_adjustment() available but not wired (deferred Wave 2/3) | ✅ done 2026-06-06 |
+| `confidence_engine.py` — `cold_start_score: float = 0.5` constructor param; default = 0.75x multiplier | ✅ done 2026-06-06 |
+| **Test count: 254/254 passing** | ✅ done 2026-06-06 |
 
 ---
 

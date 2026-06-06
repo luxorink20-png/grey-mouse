@@ -49,9 +49,16 @@ class ConfidenceEngine:
     """
 
     WINDOW = 20
-    MIN_TRADES_FOR_SCALING = 5   # below this use neutral confidence
+    MIN_TRADES_FOR_SCALING = 5   # below this use cold-start score
 
-    def __init__(self) -> None:
+    def __init__(self, cold_start_score: float = 0.5) -> None:
+        """
+        cold_start_score: confidence score (0.0–1.0) used when fewer than
+            MIN_TRADES_FOR_SCALING trades have been registered.
+            Default 0.5 → 0.75x position multiplier.
+            Set lower (e.g. 0.3) for more conservative cold-start sizing.
+        """
+        self._cold_start_score  = max(0.0, min(1.0, cold_start_score))
         self._outcomes: deque[bool]  = deque(maxlen=self.WINDOW)
         self._pnls:     deque[float] = deque(maxlen=self.WINDOW)
         self._consecutive_wins  = 0
@@ -84,10 +91,9 @@ class ConfidenceEngine:
         """
         n = len(self._outcomes)
 
-        # Not enough history — return neutral (0.5 multiplier)
+        # Not enough history — return cold-start score (configurable, default 0.5)
         if n < self.MIN_TRADES_FOR_SCALING:
-            raw = 0.5
-            return self._build_result(raw, n)
+            return self._build_result(self._cold_start_score, n)
 
         win_rate = sum(self._outcomes) / n
 
