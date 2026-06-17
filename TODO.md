@@ -341,3 +341,34 @@ Applied 17 improvements across 7 modules (all tests: 166/166 passing).
 - [x] **[AUTO-VP]** Retry gating via `_vp_retry_at_bars` — when range guard fires, wait +10 unique bars before retrying (was logging 100+ warnings/sec)
 - **Root cause fixed**: stale `levels.json` caused `trap_density=90` → `tradeable=False` → TOXIC_ENV rejection for ALL bars → pass_rate=0.0%
 - **Test count: 282/282 passing**
+
+---
+
+## CALIBRATION_MODE (2026-06-17) ✅
+
+- [x] **[CALIB-1]** `config.py` — `CALIBRATION_MODE=False` + `CALIBRATION_MIN_SCORE=30` with env-var overrides
+  (`GIBBZ_CALIBRATION_MODE=1`, `GIBBZ_CALIBRATION_MIN_SCORE=N`)
+- [x] **[CALIB-2]** `validator.py` — GATE 2 TOXIC_ENV: observe-only in calibration (0 penalty, no reject)
+  Rationale: confluence already applies env_blocked=-30; stacking -20 would require natural_score>=95 to pass
+- [x] **[CALIB-3]** `validator.py` — BFR_ENV sub-filter: observe-only in calibration (0 penalty, no reject)
+  Same rationale: stacking -15 on top of env_blocked=-30 makes calibration unusable in BELOW_VAL
+- [x] **[CALIB-4]** `validator.py` — final threshold gate uses `CALIBRATION_MIN_SCORE=30` instead of 45 in calibration
+  Calibration math: natural_score>=60 → confluence -30 = 30 ≥ 30 → APPROVED
+- [x] **[CALIB-5]** `engine.py` — `feedback.open_trade()` wrapped in no-trade guard; approved setups logged at INFO
+  Log fields: ts, zone, narrative, score, direction, price, setup_type, reason
+- **Isolation confirmed**: default mode behavior 100% identical to pre-patch (tested: TOXIC_ENV still hard-rejects)
+- **282/282 tests passing (no regressions)**
+
+**Activation:**
+```powershell
+$env:GIBBZ_CALIBRATION_MODE = "1"
+$env:GIBBZ_OVERRIDE_SESSION  = "1"   # bypass session time gate for replay
+python engine.py
+```
+
+**Deactivation (return to live/paper mode):**
+```powershell
+Remove-Item Env:GIBBZ_CALIBRATION_MODE
+Remove-Item Env:GIBBZ_OVERRIDE_SESSION
+python engine.py
+```

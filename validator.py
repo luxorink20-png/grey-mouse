@@ -37,6 +37,7 @@
 from dataclasses import dataclass, field
 from collections import deque
 from typing import Optional
+from config import CALIBRATION_MODE, CALIBRATION_MIN_SCORE
 
 
 @dataclass
@@ -390,7 +391,17 @@ class Validator:
             env_toxic = (env_name in TOXIC_ENVS or not tradeable)
 
             if env_toxic:
-                if _is_premium_exception(confirmation, continuation):
+                if CALIBRATION_MODE:
+                    # Calibration: observe only, zero score impact.
+                    # Confluence engine already applies env_blocked=-30 before this.
+                    # Adding more penalty here would require natural score>=95 to
+                    # survive, making calibration useless for MEDIUM/HIGH signals.
+                    # Live/paper mode: this branch is never reached (CALIBRATION_MODE=False).
+                    warnings.append(
+                        f"[CALIB] TOXIC_ENV observed: {env_name} trap={trap_d} "
+                        f"dir_eff={dir_eff} danger={danger} (no penalty, no reject)"
+                    )
+                elif _is_premium_exception(confirmation, continuation):
                     passed.append("TOXIC_ENV_EXCEPTION")
                     warnings.append(f"Entorno tóxico {env_name} — excepción PREMIUM")
                 else:
@@ -408,15 +419,25 @@ class Validator:
             if bfr > 55 or trap_d > 60:
                 bq_type = getattr(confirmation, "breakout_type", "NONE") if confirmation else "NONE"
                 if bq_type not in PREMIUM_BREAKOUTS:
-                    self._rejected += 1
-                    return ValidationResult(
-                        validated=False, adjusted_score=0,
-                        original_score=score, filters_passed=[],
-                        filters_failed=["BFR_ENV"],
-                        reason=(f"Validator: breakout failure environment — "
-                                f"bfr={bfr}% trap={trap_d} bq={bq_type}"),
-                        score_breakdown=breakdown,
-                    )
+                    if CALIBRATION_MODE:
+                        # Calibration: observe only, zero score impact.
+                        # Same rationale as TOXIC_ENV: confluence already
+                        # applied env_blocked=-30; stacking -15 here would
+                        # require natural_score>=95 to reach threshold=30.
+                        warnings.append(
+                            f"[CALIB] BFR_ENV observed: bfr={bfr}% trap={trap_d} "
+                            f"bq={bq_type} (no penalty, no reject)"
+                        )
+                    else:
+                        self._rejected += 1
+                        return ValidationResult(
+                            validated=False, adjusted_score=0,
+                            original_score=score, filters_passed=[],
+                            filters_failed=["BFR_ENV"],
+                            reason=(f"Validator: breakout failure environment — "
+                                    f"bfr={bfr}% trap={trap_d} bq={bq_type}"),
+                            score_breakdown=breakdown,
+                        )
                 else:
                     warnings.append(f"BFR alto ({bfr}%) pero PREMIUM breakout pasa")
 
@@ -684,13 +705,14 @@ class Validator:
                            "total_bonus":   bonus,
                            "adjusted_score": adjusted})
 
-        if adjusted < self.MIN_SCORE_TO_TRADE:
+        _min_trade = CALIBRATION_MIN_SCORE if CALIBRATION_MODE else self.MIN_SCORE_TO_TRADE
+        if adjusted < _min_trade:
             self._rejected += 1
             return ValidationResult(
                 validated=False, adjusted_score=adjusted,
                 original_score=score,
                 filters_passed=passed, filters_failed=failed,
-                reason=f"Score ajustado {adjusted} < {self.MIN_SCORE_TO_TRADE}",
+                reason=f"Score ajustado {adjusted} < {_min_trade}",
                 warning=" | ".join(warnings),
                 score_breakdown=breakdown,
             )

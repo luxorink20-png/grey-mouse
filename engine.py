@@ -37,6 +37,7 @@ from config import (
     ENABLE_LOGGING, OVERRIDE_SESSION,
     USE_REAL_FEED, ENABLE_VOICE,
     UDP_HOST, UDP_PORT,
+    CALIBRATION_MODE,
 )
 from context_filter import ContextFilter
 from quality_engine import QualityEngine
@@ -483,14 +484,30 @@ def run_engine():
                             if setup_r.signal_type != "NO_SETUP" \
                             else "CONFLUENCE"
                         _conc_monitor.set_pending(_trade_setup)
-                        feedback.open_trade(
-                            risk_result  = risk_result,
-                            analysis     = analysis,
-                            narrative    = narrative,
-                            session_name = session_name,
-                            signal_price = raw["price"],
-                            setup_type   = _trade_setup,
-                        )
+                        if CALIBRATION_MODE:
+                            # Calibration: log setup details, never open a real trade.
+                            _cf_log.info(
+                                "[CALIBRATION] setup logged — NO trade opened | "
+                                "ts=%s zone=%s narrative=%s score=%d "
+                                "direction=%s price=%.2f setup=%s reason=%s",
+                                datetime.datetime.now().strftime("%H:%M:%S"),
+                                getattr(context, "zone", "?"),
+                                getattr(narrative, "narrative", "?"),
+                                validation.adjusted_score,
+                                risk_result.direction,
+                                raw["price"],
+                                _trade_setup,
+                                validation.reason,
+                            )
+                        else:
+                            feedback.open_trade(
+                                risk_result  = risk_result,
+                                analysis     = analysis,
+                                narrative    = narrative,
+                                session_name = session_name,
+                                signal_price = raw["price"],
+                                setup_type   = _trade_setup,
+                            )
 
             closed_trade = feedback.update(raw["price"])
             fb_summary   = feedback.get_summary()

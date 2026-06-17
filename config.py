@@ -39,7 +39,9 @@ def _str(key: str, default: str) -> str:
 ENABLE_LOGGING   = _bool("GIBBZ_ENABLE_LOGGING",   True)
 OVERRIDE_SESSION = _bool("GIBBZ_OVERRIDE_SESSION",  False)
 USE_REAL_FEED    = _bool("GIBBZ_USE_REAL_FEED",     True)
-ENABLE_VOICE     = _bool("GIBBZ_ENABLE_VOICE",      True)
+ENABLE_VOICE          = _bool("GIBBZ_ENABLE_VOICE",          True)
+CALIBRATION_MODE      = _bool("GIBBZ_CALIBRATION_MODE",      False)
+CALIBRATION_MIN_SCORE = _int( "GIBBZ_CALIBRATION_MIN_SCORE", 30)
 
 # ── UDP connection ────────────────────────────────────────────────────
 UDP_HOST = _str("GIBBZ_UDP_HOST", "127.0.0.1")

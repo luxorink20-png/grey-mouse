@@ -2,7 +2,7 @@
 
 > Single source of truth for Claude Code, new developers, and the QA/product pipeline.  
 > Maintained by: Senior SWE · Senior QA · Product Owner  
-> Last updated: 2026-06-17
+> Last updated: 2026-06-17 (calibration mode)
 
 ---
 
@@ -131,6 +131,8 @@ Feature flags and connection config live in `config.py` with environment-variabl
 | `OVERRIDE_SESSION` | `config.py` | `False` | `$env:GIBBZ_OVERRIDE_SESSION=1` |
 | `USE_REAL_FEED` | `config.py` | `True` | `$env:GIBBZ_USE_REAL_FEED=0` |
 | `ENABLE_VOICE` | `config.py` | `True` | `$env:GIBBZ_ENABLE_VOICE=0` |
+| `CALIBRATION_MODE` | `config.py` | `False` | `$env:GIBBZ_CALIBRATION_MODE=1` |
+| `CALIBRATION_MIN_SCORE` | `config.py` | `30` | `$env:GIBBZ_CALIBRATION_MIN_SCORE=N` |
 | `UDP_HOST` | `config.py` | `127.0.0.1` | `$env:GIBBZ_UDP_HOST` |
 | `UDP_PORT` | `config.py` | `9999` | `$env:GIBBZ_UDP_PORT` |
 | `MIN_SCORE_TO_TRADE` | `validator.py` | `45` | Edit in-class |
@@ -412,6 +414,11 @@ Full report: `QA_AUDIT_REPORT.md`
 | **Bug fix (2026-06-17)**: `_MIN_RANGE` lowered 3.0 → 2.0 pts; 2.75 pt value area from 329 real bars is valid (session just traded tight); 3.0 was overly strict | ✅ done 2026-06-17 |
 | **Bug fix (2026-06-17)**: Retry gating via `_vp_retry_at_bars` — when range guard fires, wait 10 more unique bars before retrying (was hammering log at 100x/sec) | ✅ done 2026-06-17 |
 | **Test count: 282/282 passing** | ✅ done 2026-06-17 |
+| **CALIBRATION_MODE (2026-06-17)** — replay observation mode: TOXIC_ENV+BFR_ENV observed (0 penalty), threshold 45→30, `feedback.open_trade()` blocked; isolated from live/paper | ✅ done 2026-06-17 |
+| `config.py` — `CALIBRATION_MODE` + `CALIBRATION_MIN_SCORE=30` added with env-var overrides | ✅ done 2026-06-17 |
+| `validator.py` — GATE 2 TOXIC_ENV + BFR_ENV sub-filter: 0 penalty in calibration (observe-only); stacking penalties on top of confluence env_blocked=-30 would require score>=95 to pass, defeating calibration purpose | ✅ done 2026-06-17 |
+| `engine.py` — `feedback.open_trade()` wrapped in `if CALIBRATION_MODE` no-trade guard; all approved setups logged at INFO with ts/zone/narrative/score/direction/price/setup/reason | ✅ done 2026-06-17 |
+| **Calibration math**: natural_score>=60 → confluence -30 = 30 ≥ 30 threshold → APPROVED; lower quality (score<30 from confluence) still rejected; default mode behavior identical to pre-patch | ✅ done 2026-06-17 |
 
 ---
 
