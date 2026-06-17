@@ -3,6 +3,8 @@ import random
 import json
 import os
 import sys
+import shutil
+import datetime
 from state                import GibbzState
 from event_engine         import EventEngine
 from engine_view          import EngineView
@@ -40,6 +42,7 @@ from context_filter import ContextFilter
 from quality_engine import QualityEngine
 from confidence_engine import ConfidenceEngine
 from concentration_monitor import ConcentrationMonitor
+from auto_levels import VolumeProfileBuilder
 from log_config import get_logger as _get_logger
 _cf_log = _get_logger("context_filter.engine")
 
@@ -125,6 +128,65 @@ _conc_monitor    = ConcentrationMonitor(min_trades=5, pf_floor=1.0, window=20, c
 feed = MarketFeed(host=UDP_HOST, port=UDP_PORT) if USE_REAL_FEED else None
 
 _sim_price = POC
+
+# ── AUTO LEVELS — Volume Profile from feed ────────────────────────
+_vp_builder        = VolumeProfileBuilder(tick=0.25, min_ticks=100, min_levels=5)
+_auto_levels_done  = False   # becomes True once levels are applied
+
+
+def _apply_auto_levels(new_vah: float, new_poc: float, new_val: float) -> bool:
+    """
+    Update levels.json with VP-computed VAH/POC/VAL and reinit all
+    level-dependent engines.  Only the volume_profile section is
+    overwritten — spotgamma and session keys are preserved.
+
+    Enforces VAL < POC < VAH before writing.  Returns True on success.
+    """
+    global levels, _fa_det_rtr, _va80_det_rtr, _poc_engine
+
+    if not (new_val < new_poc < new_vah):
+        _cf_log.error(
+            "AUTO_LEVELS: invariant VAL<POC<VAH violated — skipping "
+            "(vah=%.2f poc=%.2f val=%.2f)", new_vah, new_poc, new_val,
+        )
+        return False
+
+    # Write volume_profile section atomically
+    try:
+        with open(_levels_path, encoding="utf-8") as _f:
+            _lvl_data = json.load(_f)
+        _lvl_data["volume_profile"]["VAH"] = new_vah
+        _lvl_data["volume_profile"]["POC"] = new_poc
+        _lvl_data["volume_profile"]["VAL"] = new_val
+        _lvl_data["_date"] = str(datetime.date.today())
+        _tmp = _levels_path + ".tmp"
+        with open(_tmp, "w", encoding="utf-8") as _f:
+            json.dump(_lvl_data, _f, indent=2)
+        shutil.move(_tmp, _levels_path)
+    except Exception as _e:
+        _cf_log.error("AUTO_LEVELS: levels.json write failed: %s", _e)
+        return False
+
+    # Reinit level engines with the new levels
+    try:
+        levels        = create_levels(vah=new_vah, poc=new_poc, val=new_val, proximity=2.0)
+        _fa_det_rtr   = FADetector(vah=new_vah, val=new_val)
+        _va80_det_rtr = VA80Detector(vah=new_vah, val=new_val, open_price=OPEN_PRICE)
+        _poc_engine   = PocAcceptanceEngine(vah=new_vah, poc=new_poc, val=new_val, tick=0.25)
+    except Exception as _e:
+        _cf_log.error("AUTO_LEVELS: level engine reinit failed: %s", _e)
+        return False
+
+    _cf_log.info(
+        "AUTO_LEVELS: applied from feed | VAL=%.2f POC=%.2f VAH=%.2f",
+        new_val, new_poc, new_vah,
+    )
+    print(
+        f"[AUTO_LEVELS] Levels auto-updated from feed: "
+        f"VAL={new_val} POC={new_poc} VAH={new_vah}"
+    )
+    return True
+# ─────────────────────────────────────────────────────────────────
 
 
 def simulate_price():
@@ -230,6 +292,7 @@ def run_engine():
 
     last_session = ""
     _router_bar  = 0
+    global _auto_levels_done
 
     try:
         while state.is_running:
@@ -240,6 +303,15 @@ def run_engine():
             if raw is None:
                 time.sleep(0.01)
                 continue
+
+            # ── AUTO LEVELS — collect from every bar until triggered ──
+            if USE_REAL_FEED and not _auto_levels_done:
+                _vp_builder.add_tick(raw["price"], raw.get("volume", 0.0))
+                if _vp_builder.is_ready():
+                    _vp = _vp_builder.calculate()
+                    if _vp and _apply_auto_levels(_vp["vah"], _vp["poc"], _vp["val"]):
+                        _auto_levels_done = True
+            # ─────────────────────────────────────────────────────────
 
             _context_filter.update_bar(raw)
 

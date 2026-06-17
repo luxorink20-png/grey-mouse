@@ -327,3 +327,14 @@ Applied 17 improvements across 7 modules (all tests: 166/166 passing).
   - **Fix R3d**: Rate log every 60s: `packets/min | total | queued` — confirms feed is live.
   - **Fix R3e**: First ATAS tick logged at INFO with symbol + price — confirms bridge connected.
   **Test count: 254/254 passing**
+
+
+---
+
+## Auto-Levels from Feed (2026-06-17) ✅
+
+- [x] **[AUTO-VP]** `auto_levels.py` — `VolumeProfileBuilder` builds VAH/POC/VAL from live feed ticks (standard market profile, 70% value area)
+- [x] **[AUTO-VP]** `engine.py` — `_vp_builder` wired in main loop; `_apply_auto_levels()` fires at bar 100, reinits level engines, writes levels.json atomically
+- [x] **[AUTO-VP]** `tests/unit/test_auto_levels.py` — 18 tests passing
+- **Root cause fixed**: stale `levels.json` caused `trap_density=90` → `tradeable=False` → TOXIC_ENV rejection for ALL bars → pass_rate=0.0%
+- **Test count: 276/276 passing**

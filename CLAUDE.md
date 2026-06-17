@@ -60,6 +60,9 @@ bar_aggregator.py     BarAggregator — 5-second TIME bars
     │
     ▼ dict{price, high, low, volume, delta, ask_volume, bid_volume, ...}
     │
+auto_levels.py        VolumeProfileBuilder — auto-detect VAH/POC/VAL from first 100 bars
+    │  (engine.py calls _apply_auto_levels() → reinits levels + fa/va80/poc engines)
+    │
 event_engine.py       EventEngine — INTENTO/FALLO/AGOTAMIENTO/ACUMULACIÓN
     │
 levels.py             InstitutionalLevels — zone context (AT_VAH, ABOVE_VAH, etc.)
@@ -402,6 +405,11 @@ Full report: `QA_AUDIT_REPORT.md`
 | `learning_engine.py` — observer role documented: get_adjustment() available but not wired (deferred Wave 2/3) | ✅ done 2026-06-06 |
 | `confidence_engine.py` — `cold_start_score: float = 0.5` constructor param; default = 0.75x multiplier | ✅ done 2026-06-06 |
 | **Test count: 254/254 passing** | ✅ done 2026-06-06 |
+| **Auto-Levels from Feed (2026-06-17)** — VolumeProfileBuilder auto-detects VAH/POC/VAL; no manual levels.json update needed for replay | ✅ done 2026-06-17 |
+| `auto_levels.py` — `VolumeProfileBuilder`: tick-binned VP, 70% value area algorithm, min_ticks=100 / min_levels=5 guards | ✅ done 2026-06-17 |
+| `engine.py` — `_vp_builder` collects every bar (USE_REAL_FEED only); `_apply_auto_levels()` reinits levels+fa+va80+poc engines; atomic write to levels.json | ✅ done 2026-06-17 |
+| `tests/unit/test_auto_levels.py` — 18 tests (guards, POC detection, tick rounding, value area coverage, skew, invariant) | ✅ done 2026-06-17 |
+| **Test count: 276/276 passing** | ✅ done 2026-06-17 |
 
 ---
 
@@ -419,6 +427,7 @@ Full report: `QA_AUDIT_REPORT.md`
 10. **FeedbackEngine breakeven (2026-06-06)**: `breakeven_ticks` is a constructor parameter (default=4). Do not reinstate the class-level constant `BREAKEVEN_TICKS=1`. The threshold is 4 ticks = 1.0 pt to prevent premature BREAKEVEN exits on ES/NQ (spread 1-2 ticks + slippage margin).
 11. **FeedbackEngine CANCELLED (2026-06-06)**: A trade force-closed before receiving any `update()` call (entry_price=0.0) must be classified as `CANCELLED`, not TIMEOUT. This prevents 0.0-price PnL noise in outcome metrics. CANCELLED is logged at WARNING level and counts in the `timeouts` summary accumulator.
 12. **ConcentrationMonitor (2026-06-06)**: `set_pending()` must be called immediately before `feedback.open_trade()` — not before the quality/context gate checks. Calling it when a trade is filtered out (quality skip, context skip) would tag the NEXT trade with a wrong setup type. The guard is: only call `set_pending()` in the `else` branch after all skip checks pass.
+13. **AutoLevels (2026-06-17)**: `VolumeProfileBuilder` (`auto_levels.py`) fires once after 100 bars AND ≥5 unique price levels. `_apply_auto_levels()` enforces `VAL < POC < VAH` before writing; aborts silently if violated. Only runs when `USE_REAL_FEED=True` — simulation mode is exempt. After apply, `levels`, `_fa_det_rtr`, `_va80_det_rtr`, `_poc_engine` are all replaced globally in `engine.py`. Only the `volume_profile` section of `levels.json` is overwritten — `spotgamma` and `session` keys are preserved. The `_date` field is updated to today.
 
 ### BREAKEVEN — Diseño Intencional (2026-06-06)
 
