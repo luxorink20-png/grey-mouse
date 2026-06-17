@@ -130,8 +130,9 @@ class MarketFeed:
             name   = "GibbzUDPFeed"
         )
         self._thread.start()
-        print("GIBBZ Feed listening on " +
-              self._host + ":" + str(self._port))
+        msg = "GIBBZ Feed listening on " + self._host + ":" + str(self._port)
+        print(msg)
+        _log.info("UDP socket bound — %s", msg)
 
     def stop(self) -> None:
         self._running = False

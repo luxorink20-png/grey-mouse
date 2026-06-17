@@ -293,3 +293,17 @@ Applied 17 improvements across 7 modules (all tests: 166/166 passing).
 - [x] **[A6-6.3]** `ConfidenceEngine.__init__(cold_start_score: float = 0.5)` — configurable cold-start score
   Default 0.5 → 0.75x multiplier. Set lower for more conservative paper trading start.
   **Test count: 254/254 passing (no new tests needed — existing 12 tests cover cold-start path)**
+
+---
+
+## Paper Trading Hardening (2026-06-17)
+
+- [x] **[PT-H1]** `engine.py` — silent UDP timeout → logged WARNING ✅
+  - `get_price_data()`: counter `_no_data_count` tracks consecutive 5s timeouts
+  - Logs WARNING at ~50s (10 polls) and every ~5 min after: port + host in message
+  - Resets counter when any tick arrives or partial bar is consumed
+  - Root cause: port mismatch (ATAS 7777 vs engine 9999) was undetectable before this
+- [x] **[PT-H2]** `market_feed.py` — startup port logged to gibbz.log ✅
+  - `start()` now calls `_log.info("UDP socket bound — ...")` alongside existing print
+  - Confirms listening port is recorded in `logs/gibbz.log` from session start
+  **Test count: 254/254 passing**

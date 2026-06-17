@@ -167,11 +167,22 @@ def get_price_data():
     if USE_REAL_FEED and feed is not None:
         tick = feed.get_latest_blocking(timeout=5.0)
         if tick is not None:
+            get_price_data._no_data_count = 0
             bar = aggregator.process(tick)
             return bar   # None si barra incompleta, dict si completó
-        # timeout — retornar barra parcial o simular
+        # timeout — no UDP data received
+        count = getattr(get_price_data, "_no_data_count", 0) + 1
+        get_price_data._no_data_count = count
+        # Warn at ~50s and every ~5 min after — port mismatch diagnosis
+        if count == 10 or (count > 10 and count % 60 == 0):
+            _cf_log.warning(
+                "NO UDP DATA for ~%ds — engine listening on %s:%d. "
+                "Check GibbzBridge UdpPort in ATAS matches this port.",
+                count * 5, UDP_HOST, UDP_PORT,
+            )
         partial = aggregator.get_partial()
         if partial and partial["volume"] > 0:
+            get_price_data._no_data_count = 0
             return partial
         return None      # nada que procesar
     return simulate_price()
