@@ -230,6 +230,11 @@ def get_price_data():
         tick = feed.get_latest_blocking(timeout=5.0)
         if tick is not None:
             get_price_data._no_data_count = 0
+            # Feed VP builder from every raw tick — before BarAggregator
+            # groups ticks into 5s bars. At 539K ticks/min replay speed,
+            # min_ticks=100 fires in ~11ms rather than 8 minutes.
+            if not _auto_levels_done:
+                _vp_builder.add_tick(tick["price"], tick.get("volume", 0.0))
             bar = aggregator.process(tick)
             return bar   # None si barra incompleta, dict si completó
         # timeout — no UDP data received
@@ -299,19 +304,19 @@ def run_engine():
 
             raw = get_price_data()
 
+            # ── AUTO LEVELS — fire as soon as VP has enough raw ticks ──
+            # Checked before the None guard so it fires even during the
+            # many iterations where BarAggregator hasn't closed a bar yet.
+            if USE_REAL_FEED and not _auto_levels_done and _vp_builder.is_ready():
+                _vp = _vp_builder.calculate()
+                if _vp and _apply_auto_levels(_vp["vah"], _vp["poc"], _vp["val"]):
+                    _auto_levels_done = True
+            # ─────────────────────────────────────────────────────────
+
             # Si no hay barra completa aún, esperar
             if raw is None:
                 time.sleep(0.01)
                 continue
-
-            # ── AUTO LEVELS — collect from every bar until triggered ──
-            if USE_REAL_FEED and not _auto_levels_done:
-                _vp_builder.add_tick(raw["price"], raw.get("volume", 0.0))
-                if _vp_builder.is_ready():
-                    _vp = _vp_builder.calculate()
-                    if _vp and _apply_auto_levels(_vp["vah"], _vp["poc"], _vp["val"]):
-                        _auto_levels_done = True
-            # ─────────────────────────────────────────────────────────
 
             _context_filter.update_bar(raw)
 
