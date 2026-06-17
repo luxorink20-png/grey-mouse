@@ -3,6 +3,7 @@ Unit tests for auto_levels.VolumeProfileBuilder.
 
 Covers:
   - Empty / insufficient data guards
+  - Bar-timestamp deduplication (one data point per unique ATAS bar)
   - POC detection (max-volume bin)
   - Value area expansion algorithm (70%)
   - Tick rounding (0.25 increments)
@@ -66,6 +67,76 @@ class TestGuards:
         vp = VolumeProfileBuilder()
         vp.add_tick(7000.0, -50.0)
         assert vp.tick_count == 0
+
+
+# ── Bar-timestamp deduplication ───────────────────────────────────────
+
+class TestDeduplication:
+    """
+    GibbzBridge sends 3-10 UDP packets per ATAS bar (same price, same
+    timestamp).  Without deduplication, 100 raw packets = ~25 unique bars
+    → value area as narrow as 1-2 pts.  These tests verify that bar_ts
+    causes duplicates to be dropped.
+    """
+
+    def test_duplicate_bar_ts_counted_once(self):
+        vp = VolumeProfileBuilder(min_ticks=1, min_levels=1)
+        ts = 1718000000.0
+        vp.add_tick(7010.0, 500.0, bar_ts=ts)
+        vp.add_tick(7010.0, 500.0, bar_ts=ts)   # same ts → skip
+        vp.add_tick(7010.0, 500.0, bar_ts=ts)   # same ts → skip
+        assert vp.tick_count == 1, "Three packets for same bar_ts must count as 1"
+
+    def test_different_bar_ts_both_counted(self):
+        vp = VolumeProfileBuilder(min_ticks=1, min_levels=1)
+        vp.add_tick(7010.0, 500.0, bar_ts=1718000000.0)
+        vp.add_tick(7010.25, 300.0, bar_ts=1718000005.0)   # next bar
+        assert vp.tick_count == 2
+
+    def test_dedup_prevents_narrow_value_area(self):
+        # Simulate GibbzBridge: 4 packets per bar, 30 bars, tiny price range
+        vp = VolumeProfileBuilder(tick=0.25, min_ticks=30, min_levels=3)
+        base_ts = 1718000000.0
+        for bar_i in range(30):
+            price = round(7010.0 + (bar_i % 3) * 0.25, 2)
+            ts = base_ts + bar_i * 5.0   # each bar is 5s apart
+            for _ in range(4):           # 4 UDP packets per bar
+                vp.add_tick(price, 500.0, bar_ts=ts)
+        assert vp.tick_count == 30, (
+            f"Expected 30 unique bars, got {vp.tick_count}"
+        )
+        assert vp.unique_levels == 3   # only 3 unique prices
+
+    def test_without_bar_ts_all_packets_counted(self):
+        # bar_ts=0.0 disables deduplication
+        vp = VolumeProfileBuilder(min_ticks=1, min_levels=1)
+        for _ in range(5):
+            vp.add_tick(7010.0, 100.0, bar_ts=0.0)
+        assert vp.tick_count == 5
+
+    def test_ts_zero_does_not_deduplicate(self):
+        # Explicitly: passing bar_ts=0.0 means "no timestamp, always accept"
+        vp = VolumeProfileBuilder(min_ticks=1, min_levels=1)
+        vp.add_tick(7010.0, 100.0, bar_ts=0.0)
+        vp.add_tick(7010.0, 100.0, bar_ts=0.0)
+        assert vp.tick_count == 2
+
+    def test_real_world_narrow_range_does_not_fire_with_dedup(self):
+        # Reproduce the exact bug: 100 raw packets, ~25 unique bars, 3 price levels
+        # With dedup: tick_count=25, unique_levels=3 → is_ready(min_levels=20) False
+        vp = VolumeProfileBuilder(tick=0.25, min_ticks=100, min_levels=20)
+        base_ts = 1718000000.0
+        for bar_i in range(25):   # 25 unique bars
+            price = round(7010.0 + (bar_i % 3) * 0.25, 2)
+            ts = base_ts + bar_i * 5.0
+            for _ in range(4):
+                vp.add_tick(price, 500.0, bar_ts=ts)
+        # After 100 raw packets (25 unique bars), should NOT be ready yet
+        assert vp.tick_count == 25
+        assert not vp.is_ready(), (
+            "VP must not fire on 25 unique bars / 3 price levels — "
+            "would produce a useless 0.5pt value area"
+        )
 
 
 # ── POC detection ─────────────────────────────────────────────────────

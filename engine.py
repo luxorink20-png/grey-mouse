@@ -151,6 +151,19 @@ def _apply_auto_levels(new_vah: float, new_poc: float, new_val: float) -> bool:
         )
         return False
 
+    # Sanity: value area must span at least 3 points (12 ticks for ES/MES).
+    # A narrower result means the VP was computed from insufficient price range
+    # (e.g., bridge sending duplicate bar data without timestamp deduplication).
+    _MIN_RANGE = 3.0
+    if (new_vah - new_val) < _MIN_RANGE:
+        _cf_log.warning(
+            "AUTO_LEVELS: value area too narrow (%.2f pts < %.1f) — "
+            "skipping, will retry with more bars (bars=%d levels=%d)",
+            new_vah - new_val, _MIN_RANGE,
+            _vp_builder.tick_count, _vp_builder.unique_levels,
+        )
+        return False
+
     # Write volume_profile section atomically
     try:
         with open(_levels_path, encoding="utf-8") as _f:
@@ -231,10 +244,15 @@ def get_price_data():
         if tick is not None:
             get_price_data._no_data_count = 0
             # Feed VP builder from every raw tick — before BarAggregator
-            # groups ticks into 5s bars. At 539K ticks/min replay speed,
-            # min_ticks=100 fires in ~11ms rather than 8 minutes.
+            # groups ticks into 5s bars.  bar_ts deduplicates multiple
+            # UDP packets for the same ATAS bar so min_ticks counts
+            # unique bars, not raw packets.
             if not _auto_levels_done:
-                _vp_builder.add_tick(tick["price"], tick.get("volume", 0.0))
+                _vp_builder.add_tick(
+                    tick["price"],
+                    tick.get("volume", 0.0),
+                    bar_ts=tick.get("timestamp", 0.0),
+                )
             bar = aggregator.process(tick)
             return bar   # None si barra incompleta, dict si completó
         # timeout — no UDP data received

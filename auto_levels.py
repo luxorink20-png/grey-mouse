@@ -13,12 +13,19 @@
 #       until 70% of total session volume is covered
 #    4. Upper boundary = VAH, lower boundary = VAL
 #
+#  Deduplication (bar_ts):
+#    GibbzBridge sends 3-10 UDP packets per ATAS bar (same bar, same
+#    price, same timestamp). Without deduplication, 100 raw ticks only
+#    cover ~25 unique bars → value area as narrow as 1-2 pts.
+#    add_tick(bar_ts=...) skips packets for bars already seen, so
+#    min_ticks counts unique ATAS bars, not raw UDP packets.
+#
 #  Invariant: VAL ≤ POC ≤ VAH always holds in the returned dict.
 #
 #  Usage (engine.py):
-#    vp = VolumeProfileBuilder(tick=0.25)
-#    for bar in bars:
-#        vp.add_tick(bar["price"], bar["volume"])
+#    vp = VolumeProfileBuilder(tick=0.25, min_ticks=100)
+#    for tick in ticks:
+#        vp.add_tick(tick["price"], tick["volume"], bar_ts=tick["timestamp"])
 #    if vp.is_ready():
 #        result = vp.calculate()   # {"vah": ..., "poc": ..., "val": ...}
 # ╚══════════════════════════════════════════════════════════════════╝
@@ -34,8 +41,12 @@ class VolumeProfileBuilder:
     """
     Accumulates price-volume observations and computes a Volume Profile.
 
-    is_ready() → True once min_ticks bars AND min_levels unique price
-    buckets have been accumulated.  Call calculate() at that point.
+    Deduplication: pass bar_ts (ATAS bar timestamp) to add_tick() so
+    that multiple UDP packets for the same bar only count once.
+    Each unique bar_ts = one unique ATAS bar = one data point.
+
+    is_ready() → True once min_ticks unique bars AND min_levels unique
+    price buckets have been accumulated.  Call calculate() at that point.
 
     calculate() returns None when called on empty / insufficient data
     so it is safe to call unconditionally.
@@ -43,8 +54,8 @@ class VolumeProfileBuilder:
 
     DEFAULT_TICK           = 0.25
     DEFAULT_VALUE_AREA_PCT = 0.70
-    DEFAULT_MIN_TICKS      = 100   # bars from bridge before triggering
-    DEFAULT_MIN_LEVELS     = 5     # unique price buckets minimum
+    DEFAULT_MIN_TICKS      = 100   # unique ATAS bars before triggering
+    DEFAULT_MIN_LEVELS     = 20    # unique price buckets minimum
 
     def __init__(
         self,
@@ -58,23 +69,36 @@ class VolumeProfileBuilder:
         self._min_ticks      = min_ticks
         self._min_levels     = min_levels
         self._vol_by_price:  dict[float, float] = {}
-        self._count:         int = 0
+        self._count:         int   = 0      # unique bars counted
+        self._last_bar_ts:   float = -1.0   # dedup sentinel
 
     # ── Public API ────────────────────────────────────────────────
 
-    def add_tick(self, price: float, volume: float) -> None:
+    def add_tick(self, price: float, volume: float,
+                 bar_ts: float = 0.0) -> None:
         """
         Add one bar's price-volume to the profile.
-        Ignores invalid (non-positive price, negative volume).
+
+        bar_ts: ATAS bar timestamp (tick["timestamp"]).  When non-zero,
+        packets sharing the same timestamp are treated as the same bar
+        and skipped after the first.  Pass 0.0 to disable deduplication.
+
+        Ignores invalid prices (≤0) and negative volume.
         """
         if price <= 0 or volume < 0:
             return
+        # Deduplicate: one data point per unique ATAS bar
+        if bar_ts != 0.0:
+            if bar_ts == self._last_bar_ts:
+                return
+            self._last_bar_ts = bar_ts
+
         bucket = round(round(price / self._tick) * self._tick, 4)
         self._vol_by_price[bucket] = self._vol_by_price.get(bucket, 0.0) + volume
         self._count += 1
 
     def is_ready(self) -> bool:
-        """True when enough data has been accumulated for a meaningful profile."""
+        """True when enough unique bars and price levels have been accumulated."""
         return (
             self._count >= self._min_ticks
             and len(self._vol_by_price) >= self._min_levels
@@ -130,7 +154,7 @@ class VolumeProfileBuilder:
         coverage_pct = covered / total_vol * 100 if total_vol > 0 else 0.0
 
         _log.debug(
-            "VolumeProfile computed | ticks=%d levels=%d "
+            "VolumeProfile computed | bars=%d levels=%d "
             "VAL=%.2f POC=%.2f VAH=%.2f coverage=%.1f%%",
             self._count, len(sorted_prices), val, poc, vah, coverage_pct,
         )
@@ -141,6 +165,7 @@ class VolumeProfileBuilder:
 
     @property
     def tick_count(self) -> int:
+        """Number of unique ATAS bars counted (after deduplication)."""
         return self._count
 
     @property
