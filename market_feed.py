@@ -82,7 +82,7 @@ DEBUG_PRINT_RAW = False
 
 class MarketFeed:
     """
-    GIBBZ UDP Market Feed Receiver v1.2.
+    GIBBZ UDP Market Feed Receiver v1.3.
 
     Listens on UDP port for data from GibbzBridge ATAS indicator.
     Runs in a background thread — non-blocking.
@@ -100,9 +100,18 @@ class MarketFeed:
     - Live latency = (recv_ts - timestamp) * 1000  ms.
     - Bridge v2.3+ sends float ms-precision ATAS timestamp in field 10.
 
-    Thread safety:
+    Thread safety (R3 fix):
+    - stop() joins receiver thread before closing socket — prevents WinError 10038.
+    - _socket is only modified by the receiver thread (via _reconnect) or by
+      stop() after join confirms the thread is dead. No lock needed for _socket.
     - _queue is written by receiver thread, read/consumed by engine thread.
-    - Lock protects the check+popleft sequence.
+    - _lock protects only the _queue check+popleft sequence.
+
+    Open-trade risk on reconnect failure:
+    - If _reconnect() fails, _running=False and no more bars reach the engine loop.
+    - Any trade open in FeedbackEngine will NOT be closed by market data.
+    - The engine loop spins (get_price_data returns None) and _no_data_count
+      WARNING fires at ~50s. Restart the engine to force CANCELLED resolution.
     """
 
     BUFFER_SIZE      = 1024
@@ -335,7 +344,12 @@ class MarketFeed:
             )
             return True
         except Exception as reconn_err:
-            _log.critical("UDP socket reconnect failed — engine stopped: %s", reconn_err)
+            _log.critical(
+                "UDP socket reconnect failed — engine stopped: %s. "
+                "Any open trade will NOT receive market-data updates. "
+                "Restart engine to force CANCELLED resolution.",
+                reconn_err,
+            )
             return False
 
     # ──────────────────────────────────────────────────────────────

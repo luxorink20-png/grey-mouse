@@ -87,6 +87,10 @@ class TestMarketFeedParse:
         f._lock = __import__("threading").Lock()
         f._count = 0; f._errors = 0; f._last_raw = ""
         f._connected = False
+        # v1.3 fields — must stay in sync with MarketFeed.__init__
+        f._first_packet  = True
+        f._rate_count    = 0
+        f._last_rate_log = 0.0
         return f
 
     def _csv(self, price=7200.0, open_=7199.0, high=7201.0, low=7198.0,
@@ -360,3 +364,68 @@ class TestJSONLRoundtrip:
                 result = eng.process(bar)
                 assert "event" in result
                 assert "confidence" in result
+
+
+# ── MarketFeed socket lifecycle (v1.3 reliability) ───────────────────
+
+class TestMarketFeedSocketLifecycle:
+    """
+    Tests that stop() joins the receiver thread before closing the socket,
+    eliminating WinError 10038 (WSAENOTSOCK) on Windows.
+
+    Uses an ephemeral high port (19998) to avoid conflicts with the
+    production port (9999) and other test processes.
+    """
+
+    TEST_PORT = 19998
+
+    def test_stop_joins_thread_before_socket_close(self):
+        """Core R3 fix: thread must be dead before stop() returns."""
+        feed = MarketFeed(host="127.0.0.1", port=self.TEST_PORT)
+        feed.start()
+        assert feed._thread is not None
+        assert feed._thread.is_alive()
+
+        feed.stop()
+
+        assert not feed._thread.is_alive(), (
+            "Receiver thread still alive after stop() — "
+            "WinError 10038 risk on next socket.close()"
+        )
+        assert feed._socket is None, "Socket must be None after stop()"
+
+    def test_stop_is_idempotent(self):
+        """Calling stop() twice must not raise."""
+        feed = MarketFeed(host="127.0.0.1", port=self.TEST_PORT)
+        feed.start()
+        feed.stop()
+        feed.stop()  # second call — must be a no-op
+
+    def test_running_false_after_stop(self):
+        """_running must be False after stop() regardless of thread state."""
+        feed = MarketFeed(host="127.0.0.1", port=self.TEST_PORT)
+        feed.start()
+        assert feed._running is True
+        feed.stop()
+        assert feed._running is False
+
+    def test_reconnect_rebinds_socket(self):
+        """_reconnect() must produce a live socket bound to same host:port."""
+        feed = MarketFeed(host="127.0.0.1", port=self.TEST_PORT)
+        feed.start()
+        original_socket = feed._socket
+
+        # Simulate mid-session crash: close socket without stopping thread
+        try:
+            original_socket.close()
+        except Exception:
+            pass
+        feed._socket = None
+
+        # _reconnect() must succeed and bind a fresh socket
+        result = feed._reconnect()
+        assert result is True, "_reconnect() failed to rebind socket"
+        assert feed._socket is not None, "Socket must not be None after reconnect"
+        assert feed._socket is not original_socket, "Must be a new socket object"
+
+        feed.stop()
