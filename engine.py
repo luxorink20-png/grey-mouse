@@ -132,6 +132,7 @@ _sim_price = POC
 # ── AUTO LEVELS — Volume Profile from feed ────────────────────────
 _vp_builder        = VolumeProfileBuilder(tick=0.25, min_ticks=100, min_levels=5)
 _auto_levels_done  = False   # becomes True once levels are applied
+_vp_retry_at_bars  = 0       # tick_count gate: don't retry until this bar count
 
 
 def _apply_auto_levels(new_vah: float, new_poc: float, new_val: float) -> bool:
@@ -151,10 +152,11 @@ def _apply_auto_levels(new_vah: float, new_poc: float, new_val: float) -> bool:
         )
         return False
 
-    # Sanity: value area must span at least 3 points (12 ticks for ES/MES).
-    # A narrower result means the VP was computed from insufficient price range
-    # (e.g., bridge sending duplicate bar data without timestamp deduplication).
-    _MIN_RANGE = 3.0
+    # Sanity: value area must span at least 2 points (8 ticks for ES/MES).
+    # Guards against degenerate VP from extreme low-volatility sessions.
+    # 3.0 pt threshold was too strict — a 2.75 pt value area from 300+ bars
+    # is valid and represents a genuinely tight session, not a data error.
+    _MIN_RANGE = 2.0
     if (new_vah - new_val) < _MIN_RANGE:
         _cf_log.warning(
             "AUTO_LEVELS: value area too narrow (%.2f pts < %.1f) — "
@@ -315,7 +317,7 @@ def run_engine():
 
     last_session = ""
     _router_bar  = 0
-    global _auto_levels_done
+    global _auto_levels_done, _vp_retry_at_bars
 
     try:
         while state.is_running:
@@ -325,10 +327,18 @@ def run_engine():
             # ── AUTO LEVELS — fire as soon as VP has enough raw ticks ──
             # Checked before the None guard so it fires even during the
             # many iterations where BarAggregator hasn't closed a bar yet.
-            if USE_REAL_FEED and not _auto_levels_done and _vp_builder.is_ready():
+            # _vp_retry_at_bars gates retries: when the range guard rejects,
+            # we wait 10 more unique bars before trying again (prevents
+            # flooding the log with hundreds of warnings per second).
+            if (USE_REAL_FEED and not _auto_levels_done
+                    and _vp_builder.is_ready()
+                    and _vp_builder.tick_count >= _vp_retry_at_bars):
                 _vp = _vp_builder.calculate()
                 if _vp and _apply_auto_levels(_vp["vah"], _vp["poc"], _vp["val"]):
                     _auto_levels_done = True
+                elif _vp and (_vp["vah"] - _vp["val"]) < 2.0:
+                    # Range guard rejected — wait 10 more unique bars
+                    _vp_retry_at_bars = _vp_builder.tick_count + 10
             # ─────────────────────────────────────────────────────────
 
             # Si no hay barra completa aún, esperar

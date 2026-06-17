@@ -2,7 +2,7 @@
 
 > Single source of truth for Claude Code, new developers, and the QA/product pipeline.  
 > Maintained by: Senior SWE · Senior QA · Product Owner  
-> Last updated: 2026-05-30
+> Last updated: 2026-06-17
 
 ---
 
@@ -408,8 +408,10 @@ Full report: `QA_AUDIT_REPORT.md`
 | **Auto-Levels from Feed (2026-06-17)** — VolumeProfileBuilder auto-detects VAH/POC/VAL; no manual levels.json update needed for replay | ✅ done 2026-06-17 |
 | `auto_levels.py` — `VolumeProfileBuilder`: tick-binned VP, 70% value area algorithm, min_ticks=100 / min_levels=5 guards | ✅ done 2026-06-17 |
 | `engine.py` — `_vp_builder` collects every bar (USE_REAL_FEED only); `_apply_auto_levels()` reinits levels+fa+va80+poc engines; atomic write to levels.json | ✅ done 2026-06-17 |
-| `tests/unit/test_auto_levels.py` — 18 tests (guards, POC detection, tick rounding, value area coverage, skew, invariant) | ✅ done 2026-06-17 |
-| **Test count: 276/276 passing** | ✅ done 2026-06-17 |
+| `tests/unit/test_auto_levels.py` — 24 tests (guards, dedup × 6, POC detection, tick rounding, value area coverage, skew, invariant) | ✅ done 2026-06-17 |
+| **Bug fix (2026-06-17)**: `_MIN_RANGE` lowered 3.0 → 2.0 pts; 2.75 pt value area from 329 real bars is valid (session just traded tight); 3.0 was overly strict | ✅ done 2026-06-17 |
+| **Bug fix (2026-06-17)**: Retry gating via `_vp_retry_at_bars` — when range guard fires, wait 10 more unique bars before retrying (was hammering log at 100x/sec) | ✅ done 2026-06-17 |
+| **Test count: 282/282 passing** | ✅ done 2026-06-17 |
 
 ---
 
@@ -427,7 +429,7 @@ Full report: `QA_AUDIT_REPORT.md`
 10. **FeedbackEngine breakeven (2026-06-06)**: `breakeven_ticks` is a constructor parameter (default=4). Do not reinstate the class-level constant `BREAKEVEN_TICKS=1`. The threshold is 4 ticks = 1.0 pt to prevent premature BREAKEVEN exits on ES/NQ (spread 1-2 ticks + slippage margin).
 11. **FeedbackEngine CANCELLED (2026-06-06)**: A trade force-closed before receiving any `update()` call (entry_price=0.0) must be classified as `CANCELLED`, not TIMEOUT. This prevents 0.0-price PnL noise in outcome metrics. CANCELLED is logged at WARNING level and counts in the `timeouts` summary accumulator.
 12. **ConcentrationMonitor (2026-06-06)**: `set_pending()` must be called immediately before `feedback.open_trade()` — not before the quality/context gate checks. Calling it when a trade is filtered out (quality skip, context skip) would tag the NEXT trade with a wrong setup type. The guard is: only call `set_pending()` in the `else` branch after all skip checks pass.
-13. **AutoLevels (2026-06-17)**: `VolumeProfileBuilder` (`auto_levels.py`) fires once after 100 bars AND ≥5 unique price levels. `_apply_auto_levels()` enforces `VAL < POC < VAH` before writing; aborts silently if violated. Only runs when `USE_REAL_FEED=True` — simulation mode is exempt. After apply, `levels`, `_fa_det_rtr`, `_va80_det_rtr`, `_poc_engine` are all replaced globally in `engine.py`. Only the `volume_profile` section of `levels.json` is overwritten — `spotgamma` and `session` keys are preserved. The `_date` field is updated to today.
+13. **AutoLevels (2026-06-17)**: `VolumeProfileBuilder` (`auto_levels.py`) fires once after 100 bars AND ≥5 unique price levels. `_apply_auto_levels()` enforces `VAL < POC < VAH` and `VAH-VAL ≥ 2.0 pts` before writing. When range guard fires, `_vp_retry_at_bars` gates the next retry to +10 unique bars (prevents log flooding). Only runs when `USE_REAL_FEED=True`. After apply, `levels`, `_fa_det_rtr`, `_va80_det_rtr`, `_poc_engine` are replaced globally. Only the `volume_profile` section of `levels.json` is overwritten — `spotgamma` and `session` keys preserved. `_date` updated to today. Do not raise the range guard above 2.0 pts without verifying against tight-range replay sessions.
 
 ### BREAKEVEN — Diseño Intencional (2026-06-06)
 

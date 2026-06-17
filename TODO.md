@@ -335,6 +335,9 @@ Applied 17 improvements across 7 modules (all tests: 166/166 passing).
 
 - [x] **[AUTO-VP]** `auto_levels.py` — `VolumeProfileBuilder` builds VAH/POC/VAL from live feed ticks (standard market profile, 70% value area)
 - [x] **[AUTO-VP]** `engine.py` — `_vp_builder` wired in main loop; `_apply_auto_levels()` fires at bar 100, reinits level engines, writes levels.json atomically
-- [x] **[AUTO-VP]** `tests/unit/test_auto_levels.py` — 18 tests passing
+- [x] **[AUTO-VP]** `tests/unit/test_auto_levels.py` — 24 tests (18 original + 6 deduplication tests)
+- [x] **[AUTO-VP]** Bar-timestamp deduplication (bar_ts) — GibbzBridge sends 3-10 packets per ATAS bar; dedup ensures tick_count = unique bars, not raw packets
+- [x] **[AUTO-VP]** `_MIN_RANGE` 3.0 → 2.0 pts — 2.75 pt value area from 300+ real bars is valid; 3.0 was blocking tight-range sessions until end of replay
+- [x] **[AUTO-VP]** Retry gating via `_vp_retry_at_bars` — when range guard fires, wait +10 unique bars before retrying (was logging 100+ warnings/sec)
 - **Root cause fixed**: stale `levels.json` caused `trap_density=90` → `tradeable=False` → TOXIC_ENV rejection for ALL bars → pass_rate=0.0%
-- **Test count: 276/276 passing**
+- **Test count: 282/282 passing**
