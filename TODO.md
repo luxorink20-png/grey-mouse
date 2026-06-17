@@ -307,3 +307,23 @@ Applied 17 improvements across 7 modules (all tests: 166/166 passing).
   - `start()` now calls `_log.info("UDP socket bound — ...")` alongside existing print
   - Confirms listening port is recorded in `logs/gibbz.log` from session start
   **Test count: 254/254 passing**
+
+---
+
+## UDP Socket Stability — v1.3 (2026-06-17)
+
+- [x] **[UDP-1]** `market_feed.py` v1.3 — Windows WinError 10038 root cause fixed ✅
+  - **Root cause**: `stop()` closed socket from main thread while `recvfrom()` executing
+    in receiver thread → WSAENOTSOCK (10038). Pattern: crash at session end + mid-session
+    restarts caused same race every time.
+  - **Fix R3a**: `stop()` now joins receiver thread (max 1s) BEFORE closing socket.
+    Thread exits within one TIMEOUT=0.1s period naturally. Verified: `thread.is_alive()`
+    = False immediately after `stop()` in manual test.
+  - **Fix R3b**: `OSError` in `_receive_loop` distinguishes shutdown (`_running=False` →
+    DEBUG log, break cleanly) from mid-session crash (`_running=True` → CRITICAL +
+    full `traceback.format_exc()` + `_reconnect()` auto-recovery attempt).
+  - **Fix R3c**: `SO_RCVBUF` raised to 208 KB (was OS default ~8 KB on Windows) — prevents
+    packet loss during burst periods before deque can consume.
+  - **Fix R3d**: Rate log every 60s: `packets/min | total | queued` — confirms feed is live.
+  - **Fix R3e**: First ATAS tick logged at INFO with symbol + price — confirms bridge connected.
+  **Test count: 254/254 passing**

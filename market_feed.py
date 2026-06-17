@@ -1,6 +1,17 @@
 # ╔══════════════════════════════════════════════════════════════════╗
 #  GIBBZ SMC COP — market_feed.py
-#  ATAS UDP Bridge Receiver v1.2
+#  ATAS UDP Bridge Receiver v1.3
+#
+#  v1.3 changes (Windows socket stability):
+#  - R3 fix: stop() joins receiver thread BEFORE closing socket.
+#    Prevents WinError 10038 (WSAENOTSOCK) on Windows — caused by closing
+#    a socket from the main thread while recvfrom() is executing in the
+#    receiver thread.  Thread exits within one TIMEOUT period (100ms).
+#  - R3 fix: OSError in _receive_loop distinguishes shutdown (DEBUG) from
+#    mid-session crash (CRITICAL + full traceback + auto-reconnect).
+#  - R3 fix: SO_RCVBUF raised to 208 KB (Windows default is 8 KB).
+#  - R3 fix: rate logging every 60s (packets/min + total + queue depth).
+#  - R3 fix: first ATAS packet logged at INFO with symbol and price.
 #
 #  v1.2 changes (bridge hardening):
 #  - R1 fix: replaced single-slot _latest with bounded FIFO deque
@@ -36,6 +47,7 @@
 import socket
 import threading
 import time
+import traceback
 from collections import deque
 from typing import Optional
 from log_config import get_logger
@@ -93,9 +105,11 @@ class MarketFeed:
     - Lock protects the check+popleft sequence.
     """
 
-    BUFFER_SIZE  = 1024
-    TIMEOUT      = 0.1
-    QUEUE_MAXLEN = 128    # ~390ms at peak 327 ticks/sec
+    BUFFER_SIZE      = 1024
+    TIMEOUT          = 0.1
+    QUEUE_MAXLEN     = 128    # ~390ms at peak 327 ticks/sec
+    RECV_BUF         = 212992 # 208 KB OS receive buffer (Windows default is 8 KB)
+    _LOG_RATE_SECS   = 60     # log packets/min every N seconds
 
     def __init__(self,
                  host: str = "127.0.0.1",
@@ -107,10 +121,13 @@ class MarketFeed:
         self._running:   bool                            = False
         self._queue:     deque                           = deque(maxlen=self.QUEUE_MAXLEN)
         self._lock:      threading.Lock                  = threading.Lock()
-        self._count:     int                             = 0
-        self._errors:    int                             = 0
-        self._last_raw:  str                             = ""
-        self._connected: bool                            = False
+        self._count:          int                         = 0
+        self._errors:         int                         = 0
+        self._last_raw:       str                         = ""
+        self._connected:      bool                        = False
+        self._first_packet:   bool                        = True
+        self._rate_count:     int                         = 0
+        self._last_rate_log:  float                       = 0.0
 
     # ──────────────────────────────────────────────────────────────
     #  START / STOP
@@ -121,6 +138,7 @@ class MarketFeed:
             return
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.RECV_BUF)
         self._socket.settimeout(self.TIMEOUT)
         self._socket.bind((self._host, self._port))
         self._running = True
@@ -136,9 +154,17 @@ class MarketFeed:
 
     def stop(self) -> None:
         self._running = False
+        # Join the receiver thread BEFORE closing the socket.
+        # On Windows, closing a socket from a different thread while recvfrom()
+        # is executing raises WinError 10038 (WSAENOTSOCK) in the receiver thread.
+        # With TIMEOUT=0.1s the thread exits its current recvfrom() within 100ms
+        # and then sees _running=False and breaks cleanly.
+        if self._thread is not None and self._thread.is_alive():
+            self._thread.join(timeout=1.0)
         try:
-            if self._socket:
+            if self._socket is not None:
                 self._socket.close()
+                self._socket = None
         except Exception:
             pass
 
@@ -201,6 +227,8 @@ class MarketFeed:
     def _receive_loop(self) -> None:
         assert self._socket is not None  # set by start() before thread launch
         last_packet_time = 0.0
+        self._last_rate_log = time.time()
+
         while self._running:
             try:
                 data, addr     = self._socket.recvfrom(self.BUFFER_SIZE)
@@ -224,8 +252,31 @@ class MarketFeed:
                     with self._lock:
                         self._queue.append(parsed)   # R1: buffered FIFO
                     self._count      += 1
+                    self._rate_count += 1
                     last_packet_time  = time.time()
                     self._connected   = True
+
+                    # Log first packet from ATAS — confirms bridge is live
+                    if self._first_packet:
+                        self._first_packet = False
+                        sym = parsed.get("symbol", "?")
+                        _log.info(
+                            "First ATAS tick received | symbol=%s price=%.2f | "
+                            "bridge is live on %s:%d",
+                            sym, parsed["price"], self._host, self._port,
+                        )
+
+                    # Rate log every _LOG_RATE_SECS seconds
+                    now = time.time()
+                    if now - self._last_rate_log >= self._LOG_RATE_SECS:
+                        _log.info(
+                            "UDP feed: %d packets/min | total=%d | queued=%d",
+                            self._rate_count,
+                            self._count,
+                            len(self._queue),
+                        )
+                        self._rate_count    = 0
+                        self._last_rate_log = now
 
             except socket.timeout:
                 if last_packet_time > 0:
@@ -234,18 +285,58 @@ class MarketFeed:
                 continue
 
             except OSError as e:
+                if not self._running:
+                    # Normal shutdown — stop() set _running=False before closing socket.
+                    _log.debug("UDP receiver stopped cleanly (shutdown signal received)")
+                    break
+
+                # Unexpected mid-session crash — log full traceback and try to recover.
                 _log.critical(
-                    "UDP receiver thread dying on OSError: %s — "
-                    "engine will process stale data until restarted", e
+                    "UDP receiver OSError (winerror=%s): %s\n%s",
+                    getattr(e, "winerror", "n/a"), e, traceback.format_exc(),
                 )
                 self._connected = False
-                self._running   = False
-                break
+                if self._reconnect():
+                    last_packet_time = 0.0
+                    _log.info("UDP receiver resumed after socket reconnect")
+                else:
+                    self._running = False
+                    break
 
             except Exception as e:
                 self._errors += 1
-                _log.warning("receive loop error #%d: %s", self._errors, e)
+                _log.warning("receive loop error #%d: %s\n%s",
+                             self._errors, e, traceback.format_exc())
                 continue
+
+    def _reconnect(self) -> bool:
+        """Recreate the UDP socket after an unexpected mid-session crash.
+
+        Called only when _running is True (real crash, not a shutdown).
+        Returns True if the socket was successfully re-bound.
+        """
+        try:
+            if self._socket is not None:
+                try:
+                    self._socket.close()
+                except Exception:
+                    pass
+                self._socket = None
+            time.sleep(0.5)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.RECV_BUF)
+            sock.settimeout(self.TIMEOUT)
+            sock.bind((self._host, self._port))
+            self._socket = sock
+            _log.info(
+                "UDP socket reconnected on %s:%d (auto-recovery after crash)",
+                self._host, self._port,
+            )
+            return True
+        except Exception as reconn_err:
+            _log.critical("UDP socket reconnect failed — engine stopped: %s", reconn_err)
+            return False
 
     # ──────────────────────────────────────────────────────────────
     #  PARSE UDP PACKET → dict
