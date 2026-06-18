@@ -383,7 +383,17 @@ python engine.py
   trade proceeds regardless; `not _cf_skip or PAPER_VALIDATION_MODE` gate replaces original `else` clause
 - [x] **[PVM-4]** `scripts/paper_trading_validation_mode.py` — launcher: sets env vars before engine import,
   prints banner, calls `engine.run_engine()`
+- [x] **[PVM-5]** `replay_feed.py` — import `PAPER_VALIDATION_MODE`; `env_r.blocks_trading()` gate: in validation
+  mode, count as `[VALIDATION_SKIP]` and continue instead of returning early; banner added to `run()` output
 - **282/282 tests passing (no regressions)**
+
+**Replay result (2026-06-17 — 2026-05-11_1716.jsonl / context 2024-08-22):**
+- 844 bars would have been blocked by `env_r.blocks_trading()` → logged as `[VALIDATION_SKIP]` ✅
+- 0 trades opened despite bypass — root cause: `full_backtest.py` uses `setup_router` signals
+  (technical conditions only), while `replay_feed.py` uses the full live pipeline
+  (confluence → validator requires score ≥ 45 → kills most bars even after env gate bypass)
+- **Architecture finding**: backtest trade count (98) comes from setup_router, not from validator approval.
+  Replay is production-fidelity; backtest is setup detection only. Different pipelines, different counts.
 
 **Design:**
 - ContextFilter.should_skip() runs normally (tracking + WARNING logs preserved)

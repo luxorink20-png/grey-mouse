@@ -21,6 +21,8 @@ from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from config import PAPER_VALIDATION_MODE
+
 from event_engine              import EventEngine
 from confluence_engine         import ConfluenceEngine, ConfluenceResult
 from validator                 import Validator, ValidationResult
@@ -203,6 +205,8 @@ class ReplayEngine:
         speed_str = f"{self.speed}x" if self.speed > 0 else "MAX"
         print(f"{BOLD}{B}  Speed    : {speed_str}{RST}")
         print(f"{BOLD}{G}  ✅ CONTEXT VERIFIED — fecha replay == fecha niveles{RST}")
+        if PAPER_VALIDATION_MODE:
+            print(f"{BOLD}{Y}  ⚠  PAPER VALIDATION MODE — env_r.blocks_trading() observe only{RST}")
         print(f"{BOLD}{B}{'='*60}{RST}\n")
 
         total_lines = self._count_lines()
@@ -262,8 +266,12 @@ class ReplayEngine:
         env_r    = self.market_env.analyze_environment(raw, result)
 
         if env_r.blocks_trading():
-            self.blocked["env_blocked:" + env_r.block_reason()[:40]] += 1
-            return
+            if PAPER_VALIDATION_MODE:
+                self.blocked["[VALIDATION_SKIP] " + env_r.block_reason()[:35]] += 1
+                # continue — observe only, do not skip
+            else:
+                self.blocked["env_blocked:" + env_r.block_reason()[:40]] += 1
+                return
 
         mp = ConfluenceResult(
             event="NONE", zone=context.zone, confluence="",

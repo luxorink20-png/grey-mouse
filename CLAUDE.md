@@ -424,7 +424,9 @@ Full report: `QA_AUDIT_REPORT.md`
 | `config.py` — `PAPER_VALIDATION_MODE` + env-var `GIBBZ_PAPER_VALIDATION_MODE=1` | ✅ done 2026-06-17 |
 | `engine.py` — `_cf_skip` block: validates + logs `[VALIDATION SKIP]`; `not _cf_skip or PAPER_VALIDATION_MODE` gate; startup banner | ✅ done 2026-06-17 |
 | `scripts/paper_trading_validation_mode.py` — launcher: sets env before engine import, runs `engine.run_engine()` | ✅ done 2026-06-17 |
+| `replay_feed.py` — `PAPER_VALIDATION_MODE` support: `env_r.blocks_trading()` gate observe-only; counts `[VALIDATION_SKIP]`; banner in `run()` | ✅ done 2026-06-17 |
 | **Test count: 282/282 passing** | ✅ done 2026-06-17 |
+| **Architecture finding (2026-06-17)**: `full_backtest.py` uses `setup_router` (technical signals, no validator gate) → 98 trades/43 sessions. `replay_feed.py` uses full live pipeline (confluence → validator ≥ 45 → risk) → 0 trades same sessions. Different quality bars by design. | ✅ documented 2026-06-17 |
 
 ---
 
