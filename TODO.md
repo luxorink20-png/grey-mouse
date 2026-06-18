@@ -372,3 +372,37 @@ Remove-Item Env:GIBBZ_CALIBRATION_MODE
 Remove-Item Env:GIBBZ_OVERRIDE_SESSION
 python engine.py
 ```
+
+---
+
+## PAPER_VALIDATION_MODE (2026-06-17) ✅
+
+- [x] **[PVM-1]** `config.py` — `PAPER_VALIDATION_MODE=False` with env-var override (`GIBBZ_PAPER_VALIDATION_MODE=1`)
+- [x] **[PVM-2]** `engine.py` — import `PAPER_VALIDATION_MODE`; startup banner when active
+- [x] **[PVM-3]** `engine.py` — `_cf_skip` block: if `PAPER_VALIDATION_MODE`, log `[VALIDATION SKIP]` instead of skipping;
+  trade proceeds regardless; `not _cf_skip or PAPER_VALIDATION_MODE` gate replaces original `else` clause
+- [x] **[PVM-4]** `scripts/paper_trading_validation_mode.py` — launcher: sets env vars before engine import,
+  prints banner, calls `engine.run_engine()`
+- **282/282 tests passing (no regressions)**
+
+**Design:**
+- ContextFilter.should_skip() runs normally (tracking + WARNING logs preserved)
+- If would-block: logs `[VALIDATION SKIP] ContextFilter would block | VOL_RELEASE:... | setup=... price=...`
+- Trade opens regardless (goes through full feedback/confidence/concentration pipeline)
+- Combine with `CALIBRATION_MODE=1` to observe without opening real paper trades
+
+**Activation:**
+```powershell
+python scripts/paper_trading_validation_mode.py
+# or manually:
+$env:GIBBZ_PAPER_VALIDATION_MODE = "1"
+$env:GIBBZ_OVERRIDE_SESSION      = "1"
+python engine.py
+```
+
+**Post-session analysis:**
+```powershell
+python scripts/daily_paper_trading_report.py
+Get-Content logs\gibbz.log | Select-String "VALIDATION SKIP"
+Get-Content logs\gibbz.log | Select-String "VALIDATION SKIP" | Measure-Object -Line
+```

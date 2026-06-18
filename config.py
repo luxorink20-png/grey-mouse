@@ -42,6 +42,7 @@ USE_REAL_FEED    = _bool("GIBBZ_USE_REAL_FEED",     True)
 ENABLE_VOICE          = _bool("GIBBZ_ENABLE_VOICE",          True)
 CALIBRATION_MODE      = _bool("GIBBZ_CALIBRATION_MODE",      False)
 CALIBRATION_MIN_SCORE = _int( "GIBBZ_CALIBRATION_MIN_SCORE", 30)
+PAPER_VALIDATION_MODE = _bool("GIBBZ_PAPER_VALIDATION_MODE", False)
 
 # ── UDP connection ────────────────────────────────────────────────────
 UDP_HOST = _str("GIBBZ_UDP_HOST", "127.0.0.1")

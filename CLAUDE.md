@@ -133,6 +133,7 @@ Feature flags and connection config live in `config.py` with environment-variabl
 | `ENABLE_VOICE` | `config.py` | `True` | `$env:GIBBZ_ENABLE_VOICE=0` |
 | `CALIBRATION_MODE` | `config.py` | `False` | `$env:GIBBZ_CALIBRATION_MODE=1` |
 | `CALIBRATION_MIN_SCORE` | `config.py` | `30` | `$env:GIBBZ_CALIBRATION_MIN_SCORE=N` |
+| `PAPER_VALIDATION_MODE` | `config.py` | `False` | `$env:GIBBZ_PAPER_VALIDATION_MODE=1` |
 | `UDP_HOST` | `config.py` | `127.0.0.1` | `$env:GIBBZ_UDP_HOST` |
 | `UDP_PORT` | `config.py` | `9999` | `$env:GIBBZ_UDP_PORT` |
 | `MIN_SCORE_TO_TRADE` | `validator.py` | `45` | Edit in-class |
@@ -419,6 +420,11 @@ Full report: `QA_AUDIT_REPORT.md`
 | `validator.py` — GATE 2 TOXIC_ENV + BFR_ENV sub-filter: 0 penalty in calibration (observe-only); stacking penalties on top of confluence env_blocked=-30 would require score>=95 to pass, defeating calibration purpose | ✅ done 2026-06-17 |
 | `engine.py` — `feedback.open_trade()` wrapped in `if CALIBRATION_MODE` no-trade guard; all approved setups logged at INFO with ts/zone/narrative/score/direction/price/setup/reason | ✅ done 2026-06-17 |
 | **Calibration math**: natural_score>=60 → confluence -30 = 30 ≥ 30 threshold → APPROVED; lower quality (score<30 from confluence) still rejected; default mode behavior identical to pre-patch | ✅ done 2026-06-17 |
+| **PAPER_VALIDATION_MODE (2026-06-17)** — ContextFilter observe pass-through: [VALIDATION SKIP] logged, trade proceeds | ✅ done 2026-06-17 |
+| `config.py` — `PAPER_VALIDATION_MODE` + env-var `GIBBZ_PAPER_VALIDATION_MODE=1` | ✅ done 2026-06-17 |
+| `engine.py` — `_cf_skip` block: validates + logs `[VALIDATION SKIP]`; `not _cf_skip or PAPER_VALIDATION_MODE` gate; startup banner | ✅ done 2026-06-17 |
+| `scripts/paper_trading_validation_mode.py` — launcher: sets env before engine import, runs `engine.run_engine()` | ✅ done 2026-06-17 |
+| **Test count: 282/282 passing** | ✅ done 2026-06-17 |
 
 ---
 

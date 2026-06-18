@@ -38,6 +38,7 @@ from config import (
     USE_REAL_FEED, ENABLE_VOICE,
     UDP_HOST, UDP_PORT,
     CALIBRATION_MODE,
+    PAPER_VALIDATION_MODE,
 )
 from context_filter import ContextFilter
 from quality_engine import QualityEngine
@@ -314,6 +315,17 @@ def run_engine():
         print("Microstructure: ON")
         print("Adaptive      : ON")
         print("Learning      : ON")
+        if PAPER_VALIDATION_MODE:
+            print("─── PAPER VALIDATION MODE ─────────────────")
+            print("  ContextFilter.should_skip() → observe only")
+            print("  All quality-approved setups proceed to trade.")
+            print("  Blocked setups logged as [VALIDATION SKIP].")
+            print("───────────────────────────────────────────")
+        if CALIBRATION_MODE:
+            print("─── CALIBRATION MODE ───────────────────────")
+            print("  TOXIC_ENV/BFR_ENV → 0 penalty (observe only)")
+            print("  Threshold 45 → 30.  No trades opened.")
+            print("───────────────────────────────────────────")
         time.sleep(1)
 
     last_session = ""
@@ -475,11 +487,19 @@ def run_engine():
 
                     _cf_skip, _cf_reason = _context_filter.should_skip(raw)
                     if _cf_skip:
-                        _cf_log.info(
-                            "CONTEXT SKIP | %s | setup=%s price=%.2f",
-                            _cf_reason, setup_r.signal_type, raw["price"],
-                        )
-                    else:
+                        if PAPER_VALIDATION_MODE:
+                            _cf_log.info(
+                                "[VALIDATION SKIP] ContextFilter would block | %s | "
+                                "setup=%s price=%.2f",
+                                _cf_reason, setup_r.signal_type, raw["price"],
+                            )
+                        else:
+                            _cf_log.info(
+                                "CONTEXT SKIP | %s | setup=%s price=%.2f",
+                                _cf_reason, setup_r.signal_type, raw["price"],
+                            )
+
+                    if not _cf_skip or PAPER_VALIDATION_MODE:
                         _trade_setup = setup_r.signal_type \
                             if setup_r.signal_type != "NO_SETUP" \
                             else "CONFLUENCE"
